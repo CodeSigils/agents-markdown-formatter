@@ -7,15 +7,16 @@ This repository builds a formatter-first Markdown skill/tool for AI agents.
 Agents working here MUST:
 
 1. Read `plan.md` before implementation work.
-2. Treat `references/prior-art/**` as historical/reference material unless a task explicitly promotes code into the active implementation.
-3. Keep the installed runtime payload separate from repository-only planning, tests, fixtures, and development tooling.
-4. Build and verify the staged install artifact before claiming user-facing shipping readiness.
-5. Check edited Markdown files with the repository's Oxc/Oxfmt path, not external Markdown formatters or linters.
-6. Do not run doc-formatting tools over raw formatter fixtures unless the task is explicitly testing compatibility on a copy.
-7. Do not use external Markdown formatters or linters as repo validation because that defeats this repository's purpose.
-8. Guard against documentation drift and stale instructions whenever behavior, commands, paths, identity, configuration, validation policy, install payload, or release process changes.
-9. Consult the Markdown Oxc spike before changing formatter behavior, structural guards, Oxfmt config, fixture policy, embedded formatting policy, or release safety checks.
-10. Review agent guard policies at the end of implementation so shipped instructions do not contain stale transitional commands, paths, or identities.
+2. Use **ripgrep** (grep tool) for searching codebases — never read entire files with `cat`, `head`, or `tail` when a targeted search suffices. For large files (>200 lines), use grep with context lines (`grep -C N`) to find the relevant section, then read only that section with offset/limit.
+3. Treat `references/prior-art/**` as historical/reference material unless a task explicitly promotes code into the active implementation.
+4. Keep the installed runtime payload separate from repository-only planning, tests, fixtures, and development tooling.
+5. Build and verify the staged install artifact before claiming user-facing shipping readiness.
+6. Check edited Markdown files with the repository's Oxc/Oxfmt path, not external Markdown formatters or linters.
+7. Do not run doc-formatting tools over raw formatter fixtures unless the task is explicitly testing compatibility on a copy.
+8. Do not use external Markdown formatters or linters as repo validation because that defeats this repository's purpose.
+9. Guard against documentation drift and stale instructions whenever behavior, commands, paths, identity, configuration, validation policy, install payload, or release process changes.
+10. Consult the Markdown Oxc spike before changing formatter behavior, structural guards, Oxfmt config, fixture policy, embedded formatting policy, or release safety checks.
+11. Review agent guard policies at the end of implementation so shipped instructions do not contain stale transitional commands, paths, or identities.
 
 ## Active implementation target
 
