@@ -58,7 +58,7 @@ This formatter targets **GitHub-Flavored Markdown (GFM)** as the v1 compatibilit
 
 ## Version Policy
 
-This repo tracks `oxfmt` as a **devDependency only**. The installed skill payload ships zero dependencies — users resolve `oxfmt` themselves via their own tooling.
+This repo tracks `oxfmt` as a **devDependency only**. The installed skill payload ships zero dependencies — users resolve `oxfmt` themselves via their own tooling. Node.js `>=20` is required (ES2024 features, improved test runner, better error messages).
 
 **Rules:**
 - `oxfmt` must be pinned to an exact version in `package.json` devDependencies (no ranges in committed files).

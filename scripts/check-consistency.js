@@ -121,6 +121,12 @@ if (pkgJson) {
     } else {
       warnings.push("oxfmt not found in package.json devDependencies");
     }
+    if (pkg.engines && pkg.engines.node) {
+      const nodeReq = pkg.engines.node;
+      if (!nodeReq.includes(">=20")) {
+        warnings.push(`package.json engines.node is "${nodeReq}" — >=20 is recommended`);
+      }
+    }
   } catch (e) {
     errors.push(`package.json is not valid JSON: ${e.message}`);
   }
