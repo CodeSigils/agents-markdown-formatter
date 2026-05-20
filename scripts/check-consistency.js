@@ -102,15 +102,36 @@ const KNOWN_OXFMT_KEYS = new Set([
   "proseWrap", "embeddedLanguageFormatting", "ignorePatterns",
 ]);
 
+const errors = [];
+const warnings = [];
+
+const pkgJson = read("package.json");
+if (pkgJson) {
+  try {
+    const pkg = JSON.parse(pkgJson);
+    const devDeps = pkg.devDependencies || {};
+    const pkgVersion = devDeps.oxfmt;
+    if (pkgVersion) {
+      const latest = "0.51.0";
+      if (pkgVersion !== latest && !pkgVersion.startsWith("^" + latest)) {
+        warnings.push(
+          `oxfmt in package.json is ${pkgVersion}, latest is ${latest} — consider upgrading`
+        );
+      }
+    } else {
+      warnings.push("oxfmt not found in package.json devDependencies");
+    }
+  } catch (e) {
+    errors.push(`package.json is not valid JSON: ${e.message}`);
+  }
+}
+
 const staleChecks = [
   { pattern: /markdownlint-cli2/, reason: "old formatter tool" },
   { pattern: /npx\s+markdownlint/, reason: "old linter via npx" },
   { pattern: /format-tables\.js.*format|primary.*formatter.*format-tables/i, reason: "format-tables is not the primary formatter" },
   { pattern: /name:\s*markdown-lint/, reason: "skill name should be 'markdown-formatter'" },
 ];
-
-const errors = [];
-const warnings = [];
 
 const readme = read("README.md");
 const skillMd = read("skills/markdown-formatter/SKILL.md");

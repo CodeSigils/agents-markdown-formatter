@@ -12,7 +12,7 @@
     "guard": "node skills/markdown-formatter/src/index.js --guard ."
   },
   "devDependencies": {
-    "oxfmt": "^0.45.0"
+    "oxfmt": "^0.51.0"
   },
   "engines": {
     "node": ">=14"

@@ -56,6 +56,17 @@ This formatter targets **GitHub-Flavored Markdown (GFM)** as the v1 compatibilit
 
 **Source-of-truth rule:** use official Oxfmt docs for current CLI/config/support claims. Use DeepWiki for architecture and source-file orientation only when it conflicts with official docs.
 
+## Version Policy
+
+This repo tracks `oxfmt` as a **devDependency only**. The installed skill payload ships zero dependencies — users resolve `oxfmt` themselves via their own tooling.
+
+**Rules:**
+- `oxfmt` must be pinned to an exact version in `package.json` devDependencies (no ranges in committed files).
+- `scripts/check-consistency.js` warns when `package.json` `oxfmt` version is behind the latest release.
+- Breaking Markdown-formatting changes in a minor/major `oxfmt` release require a regression pass: run `npm test` and verify structural guards pass.
+- Check [github.com/oxc-project/oxc/releases](https://github.com/oxc-project/oxc/releases) for `oxfmt` changelog before upgrading.
+- Breaking changes between versions (marked `BREAKING` in changelog) that affect GFM/MDX formatting output must be evaluated before bumping.
+
 ## Current State Analysis
 
 ### Hermes Repo Structure
@@ -248,6 +259,7 @@ Implement in a new repository at `/home/sand/projects/agents-markdown-formatter`
   - README badge version matches SKILL.md frontmatter version
   - No stale shipped references to markdownlint-cli2, `npx markdownlint`, `markdown-lint` identity, or old primary formatter paths
   - Plan drift: expected files exist, stale artifacts do not
+  - Oxfmt version in `package.json` devDependencies is within 1 minor of latest
 - [x] Add stale-text detection for old pipeline artifacts (`markdownlint-cli2`, `npx markdownlint`, `format-tables.js` as formatter, `markdown-lint` as skill identity)
 - [x] Remove `.markdownlint.json` or clearly mark as deprecated
 
