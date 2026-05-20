@@ -16,6 +16,27 @@ The new formatter replaces the `markdownlint-cli2` + `format-tables.js` formatti
 
 ---
 
+## v1 Scope: GitHub-Flavored Markdown
+
+This formatter targets **GitHub-Flavored Markdown (GFM)** as the v1 compatibility baseline. Non-GFM dialects are out of scope unless explicitly added later through dialect-specific profiles.
+
+**In scope (v1):**
+- GFM tables (alignment, column consistency)
+- Fenced code blocks (language info strings, tilde vs backtick)
+- Task lists, headings, lists, blockquotes
+- Links, autolinks, inline code, strikethrough
+- Structural pre/post guards (fence counts, table column drift)
+
+**Out of scope (v1 — explicit):**
+- MDX, Obsidian wiki links, Mermaid validation
+- Frontmatter semantics (YAML frontmatter is preserved but not parsed/validated)
+- Pandoc dialects, semantic rewriting
+- `embeddedLanguageFormatting: "auto"` — defaults to `"off"` for v1
+
+**Rationale:** GFM gives a clear, stable contract for GitHub READMEs and documentation. Attempting to support "Markdown generally" becomes a compatibility swamp. The structural guard is specifically GFM-table and GFM-fenced-code focused.
+
+---
+
 ## External Resources to be Aware off
 
 <https://github.com/CodeSigils/markdown-oxc-spike>
@@ -210,11 +231,11 @@ Implement in a new repository at `/home/sand/projects/agents-markdown-formatter`
 
 - [ ] Treat the spike repo (<https://github.com/CodeSigils/markdown-oxc-spike>) as prior art; do not repeat fixture work unless this repo needs Hermes-specific coverage.
 - [ ] Consult **both** the remote spike repo and local `references/prior-art/markdown-oxc-spike/findings.md` for Oxfmt behavior, fixtures, and guard requirements.
-- [ ] Verify current official Oxfmt docs still list Markdown and MDX support before changing formatter behavior.
+- [x] ~~Verify current official Oxfmt docs still list Markdown and MDX support before changing formatter behavior.~~ MDX support confirmed in Oxfmt docs — excluded from v1 scope per GFM contract above.
 - [ ] Test oxfmt on `test/kitchensink.md` and `test/hermes-intro.md` — compare output against structural invariants, not old markdownlint formatting expectations.
 - [ ] Do NOT assume `.oxfmtrc.json` covers all current `.markdownlint.json` rules; document markdownlint-style policy gaps explicitly.
 - [ ] Check oxfmt idempotence: run twice, verify convergence.
-- [ ] Decide whether `embeddedLanguageFormatting` should be `"auto"` or `"off"` for the first safe Hermes release.
+- [x] ~~Decide whether `embeddedLanguageFormatting` should be `"auto"` or `"off"` for the first safe Hermes release.~~ Decision: `"off"` — out of scope for v1 per GFM contract above.
 - [ ] Decide: keep `format-tables.js` as fallback for validate-only mode?
 - [ ] **Test framework**: use Node's built-in test runner (`node --test`) for all unit and integration tests. Do not introduce vitest, jest, or other test frameworks.
 
@@ -527,9 +548,9 @@ After EVERY implementation phase, run:
 | Risk                                                  | Mitigation                                                                                                                    |
 | :---------------------------------------------------- | :---------------------------------------------------------------------------------------------------------------------------- |
 | oxfmt produces different output than current pipeline | Keep `format-tables.js` as fallback/validate mode; regression test on all fixtures and compare structural invariants          |
-| oxfmt has gaps vs markdownlint rules                  | Official docs list Markdown/MDX support, but markdownlint-specific policy rules may not be covered — document gaps explicitly |
-| Structural drift from oxfmt                           | Pre/post structural guard catches fence/table drift and optional fenced-code content drift                                    |
-| Embedded formatting changes code fences unexpectedly  | Make `embeddedLanguageFormatting` an explicit config/product decision; default to `"off"` for conservative first release      |
+| oxfmt has gaps vs markdownlint rules                  | GFM scope excludes markdownlint policy rules — gaps are expected and out of scope; document GFM-specific gaps only            |
+| Structural drift from oxfmt                           | Pre/post structural guard catches fence/table drift per GFM contract                                                           |
+| Embedded formatting changes code fences unexpectedly  | v1 scope sets `embeddedLanguageFormatting: "off"` — MDX and embedded JS/TS formatting explicitly out of scope               |
 | Dev dependencies leak into shipped skill              | Root `package.json` is dev-only; staged install allowlist fails if package files, lockfiles, or `node_modules/` are shipped   |
 | `npx` reintroduces runtime drift                      | Product wrapper never calls `npx`; it resolves local dev binary, then PATH, then fails with setup instructions                |
 | Hermes hook system incompatibility                    | `post-write.js` is a shell hook, not affected by formatter change                                                             |

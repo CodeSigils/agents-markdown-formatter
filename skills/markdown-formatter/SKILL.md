@@ -1,6 +1,6 @@
 ---
 name: markdown-formatter
-description: "Format markdown to GFM standard using oxfmt + structural guardrails"
+description: "Format Markdown to GFM standard using oxfmt + structural guardrails"
 version: "1.0.0"
 author: "CodeSigils"
 license: "MIT"
@@ -11,6 +11,16 @@ metadata.hermes.tags:
   - oxfmt
   - gfm
 ---
+
+## Scope
+
+This skill formats **GitHub-Flavored Markdown (GFM)**. Non-GFM dialects (MDX, Obsidian wiki links, Mermaid, Pandoc) are out of scope for v1.
+
+**In scope:** GFM tables, fenced code blocks, task lists, headings, lists, blockquotes, links, autolinks, inline code, strikethrough.
+
+**Out of scope:** MDX, frontmatter semantics, semantic rewriting. YAML frontmatter is preserved but not parsed.
+
+**`embeddedLanguageFormatting`:** Set to `"off"` in the default `.oxfmtrc` — code inside fenced blocks is left as-is.
 
 ## Usage
 
