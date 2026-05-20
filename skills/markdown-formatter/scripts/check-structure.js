@@ -7,7 +7,7 @@
  * Usage:
  *   node check-structure.js --snapshot <file>    Write structural snapshot
  *   node check-structure.js --check <file>     Compare against snapshot, exit 0 if unchanged
- *   node check-structure.js --guard <file>      snapshot + check in one pass (for pre/post workflow)
+ *   node check-structure.js --guard <file>      Write snapshot (CLI owns pre/post workflow)
  *   node check-structure.js --verify <file>     Static structural check only (no snapshot)
  *
  * Snapshot format: <file>.structure.json
@@ -40,7 +40,7 @@ function extractFences(content) {
       continue;
     }
 
-    const closerPattern = new RegExp(`^${current.indent}${current.style}{${current.length},}\\s*$`);
+    const closerPattern = new RegExp(`^ {0,3}${current.style}{${current.length},}\\s*$`);
     if (closerPattern.test(line)) {
       fences.push({
         opener: current.opener,

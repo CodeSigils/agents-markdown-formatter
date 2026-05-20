@@ -123,6 +123,6 @@ The skill follows a strict runtime allowlist:
 Agent behavior and constraints are defined in:
 
 - [`AGENTS.md`](AGENTS.md) — Repository governance and agent workflow policies
-- [`skills/markdown-formatter/SKILL.md`] — Hermes-specific skill definition (shipped)
+- [`skills/markdown-formatter/SKILL.md`](skills/markdown-formatter/SKILL.md) — Hermes-specific skill definition (shipped)
 
 Agents working on this repository must consult `AGENTS.md` before implementation work and follow the formatter-first identity guidelines.

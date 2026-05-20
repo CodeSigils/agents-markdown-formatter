@@ -15,8 +15,8 @@ const { spawnSync } = require('child_process');
 const { join, resolve, extname, relative } = require('path');
 const { readdirSync, statSync, existsSync } = require('fs');
 
-const ROOT = resolve(__dirname, '../../..');
-const SKILL_DIR = resolve(__dirname, '..');
+const ROOT = resolve(__dirname, '..');
+const SKILL_DIR = resolve(ROOT, 'skills/markdown-formatter');
 const DEFAULT_TARGETS = [
   'test/fixtures/current',
   'test/fixtures/oxfmt-spike',

@@ -12,7 +12,7 @@ const { join, resolve } = require("path");
 const ROOT = resolve(__dirname, "..");
 
 // Files the plan.md "Target Repository / Skill Shape" section says should exist.
-// Stale plan references are errors; missing shipped files are errors.
+// Stale plan references are errors; missing repository-shape files are errors.
 const CI_WORKFLOW_PATH = join(ROOT, ".github/workflows/ci.yml");
 const NODE_MIN_VERSION = 20;
 
@@ -36,6 +36,10 @@ function validateCiWorkflow() {
   const required = [
     { pattern: /oxfmt.*--version|oxfmt.*version/i, label: "verifies oxfmt version" },
     { pattern: /npm\s+test/i, label: "runs npm test (structural guards)" },
+    { pattern: /npm\s+run\s+test:unit/i, label: "runs unit tests" },
+    { pattern: /npm\s+run\s+test:integration/i, label: "runs integration tests" },
+    { pattern: /npm\s+run\s+format:check/i, label: "checks maintainer docs formatting" },
+    { pattern: /staged-install-verify\.sh/i, label: "verifies staged runtime payload" },
     { pattern: /node_modules\/\.bin\/oxfmt|npm\s+ci/i, label: "uses pinned npm oxfmt install" },
   ];
   for (const { pattern, label } of required) {
@@ -48,13 +52,14 @@ function validateCiWorkflow() {
   }
 }
 
-const PLAN_EXPECTED_SHIP = new Set([
+const PLAN_EXPECTED_REPO_SHAPE = new Set([
   "AGENTS.md",
   "README.md",
   "plan.md",
   ".oxfmtrc.json",
   ".github/workflows/ci.yml",
   "package.json",
+  "scripts/check-all.js",
   "scripts/check-consistency.js",
   "scripts/staged-install-verify.sh",
   "skills/markdown-formatter/SKILL.md",
@@ -62,7 +67,6 @@ const PLAN_EXPECTED_SHIP = new Set([
   "skills/markdown-formatter/scripts/check-fences.js",
   "skills/markdown-formatter/scripts/check-structure.js",
   "skills/markdown-formatter/scripts/check-tables.js",
-  "skills/markdown-formatter/references/",
   "test/",
 ]);
 
@@ -121,13 +125,12 @@ function findCliFlags(content) {
     .filter((f) => f !== "--");
 }
 
-const SHIP_PATTERNS = [
+const ACTIVE_DRIFT_CHECK_PATTERNS = [
   "skills/markdown-formatter/SKILL.md",
   "skills/markdown-formatter/src/index.js",
   "skills/markdown-formatter/scripts/check-structure.js",
   "skills/markdown-formatter/scripts/check-fences.js",
   "skills/markdown-formatter/scripts/check-tables.js",
-  "skills/markdown-formatter/references/",
   "README.md",
   "AGENTS.md",
 ];
@@ -230,7 +233,7 @@ for (const [file, content] of [
   ["skills/markdown-formatter/src/index.js", indexJs],
 ]) {
   if (!content) continue;
-  if (!SHIP_PATTERNS.some((p) => file.startsWith(p))) continue;
+  if (!ACTIVE_DRIFT_CHECK_PATTERNS.some((p) => file.startsWith(p))) continue;
   for (const { pattern, reason } of staleChecks) {
     if (pattern.test(content)) {
       errors.push(`stale ref in ${file}: "${reason}"`);
@@ -244,7 +247,7 @@ const allFiles = findAllFiles(ROOT).filter((f) => {
   return !parts.some((p) => EXCLUDE_DIRS.has(p));
 });
 
-for (const expected of PLAN_EXPECTED_SHIP) {
+for (const expected of PLAN_EXPECTED_REPO_SHAPE) {
   if (expected.endsWith("/")) {
     if (!allFiles.some((f) => f.startsWith(expected))) {
       errors.push(`plan drift: expected directory "${expected}" is missing`);
@@ -265,7 +268,7 @@ const PAYLOAD_PREFIXES = [
   "skills/markdown-formatter/scripts/",
 ];
 const KNOWN_PAYLOAD_CHECKS = new Set([
-  "check-all.js", "check-fences.js", "check-structure.js", "check-tables.js",
+  "check-fences.js", "check-structure.js", "check-tables.js",
 ]);
 for (const prefix of PAYLOAD_PREFIXES) {
   const unexpected = allFiles.filter((f) => {

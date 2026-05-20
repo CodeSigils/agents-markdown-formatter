@@ -4,14 +4,13 @@
   "description": "Formatter-first GFM+MDX skill for AI agents powered by Oxc oxfmt",
   "private": true,
   "scripts": {
-    "test": "node skills/markdown-formatter/scripts/check-all.js",
-    "test:verbose": "node skills/markdown-formatter/scripts/check-all.js test/fixtures/",
+    "test": "node scripts/check-all.js",
+    "test:verbose": "node scripts/check-all.js test/fixtures/",
     "test:unit": "node --test test/unit/*.test.js",
     "test:integration": "node --test test/integration/*.test.js",
-    "format": "node skills/markdown-formatter/src/index.js --fix --all .",
-    "format:check": "node skills/markdown-formatter/src/index.js --check --all .",
-    "verify": "node skills/markdown-formatter/src/index.js --verify --all .",
-    "guard": "node skills/markdown-formatter/src/index.js --guard --all ."
+    "format": "node skills/markdown-formatter/src/index.js --fix README.md AGENTS.md plan.md skills/markdown-formatter/SKILL.md",
+    "format:check": "node skills/markdown-formatter/src/index.js --check README.md AGENTS.md plan.md skills/markdown-formatter/SKILL.md",
+    "verify": "node skills/markdown-formatter/src/index.js --verify README.md AGENTS.md plan.md skills/markdown-formatter/SKILL.md"
   },
   "devDependencies": {
     "oxfmt": "0.51.0"

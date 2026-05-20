@@ -176,8 +176,14 @@ function processFile(filePath, args) {
   if (args.verify) return runStructuralValidation(filePath) && runOxfmt(["--check", filePath]) && checkIdempotenceReadOnly(filePath);
 
   if (args.guard) {
+    if (args.check) return runStructuralValidation(filePath) && runOxfmt(["--check", filePath]);
+    if (args["dry-run"]) {
+      if (!runStructuralValidation(filePath)) return false;
+      if (!runOxfmt(["--check", filePath])) console.log(`Would format: ${filePath}`);
+      return true;
+    }
     if (!runScript("check-structure.js", "--snapshot", filePath)) return false;
-    if (!args.check && !args["dry-run"] && !runOxfmt(["--write", filePath])) return false;
+    if (!runOxfmt(["--write", filePath])) return false;
     return runScript("check-structure.js", "--check", filePath);
   }
 

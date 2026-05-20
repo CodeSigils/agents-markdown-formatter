@@ -31,7 +31,6 @@ function validateFences(content) {
 
     if (current) {
       const closesCurrent =
-        indent === current.indent &&
         fenceChar === current.fenceChar &&
         fenceLength >= current.fenceLength &&
         infoString.trim() === "";

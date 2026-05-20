@@ -17,6 +17,7 @@ Agents working here MUST:
 9. Guard against documentation drift and stale instructions whenever behavior, commands, paths, identity, configuration, validation policy, install payload, or release process changes.
 10. Consult the Markdown Oxc spike before changing formatter behavior, structural guards, Oxfmt config, fixture policy, embedded formatting policy, or release safety checks.
 11. Review agent guard policies at the end of implementation so shipped instructions do not contain stale transitional commands, paths, or identities.
+12. After a major overhaul to behavior, CLI semantics, runtime payload, CI, release process, documentation structure, fixture policy, or repository layout, run a concise read-only audit before reporting final completion. Do not edit during that audit unless the user explicitly asks for fixes.
 
 ## Active implementation target
 
@@ -79,3 +80,5 @@ Treat drift severity as:
 | BLOCKING | false status, stale commands, broken checks, or payload drift  | fix before reporting complete |
 | WARNING  | incomplete context, unclear ownership, or weak readiness words | fix when touching nearby docs |
 | INFO     | historical/prior-art notes clearly labeled as historical       | preserve with context         |
+
+For the post-overhaul read-only audit, return concise findings grouped by the same severity levels with concrete evidence. Check coding/structure standards, release-boundary drift, documentation consistency, package/CI paths, and staged runtime payload boundaries.

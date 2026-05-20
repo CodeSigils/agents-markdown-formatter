@@ -22,6 +22,7 @@ DEV_ONLY_PATHS=(
     "plan.md"
     "AGENTS.md"
     "README.md"
+    "scripts/"
     "test/"
     ".github/"
     "node_modules/"
@@ -30,6 +31,7 @@ DEV_ONLY_PATHS=(
     ".omo/"
     ".open-mem/"
     "references/"
+    "skills/markdown-formatter/references/"
 )
 
 # Clean and create staging directory
@@ -107,20 +109,66 @@ fi
 echo ""
 echo "✓ No dev-only paths found in staged output"
 
-# Test the staged skill works from /tmp
+# Test the staged skill works from an isolated staged directory.
 echo ""
 echo "Testing staged skill from ${STAGE_DIR}:"
 echo "======================================"
 cd "${STAGE_DIR}"
 
-# Make the index.js executable
+# Make the index.js executable and expose the repository-pinned oxfmt as the
+# external formatter binary. The staged skill itself must not contain node_modules.
 chmod +x skills/markdown-formatter/src/index.js
+export PATH="${SOURCE_DIR}/node_modules/.bin:${PATH}"
 
-# Run help command and capture output
+FIXTURE_DIR="$(mktemp -d)"
+trap 'rm -rf "$FIXTURE_DIR"' EXIT
+VALID_FIXTURE="${FIXTURE_DIR}/valid.md"
+GUARD_FIXTURE="${FIXTURE_DIR}/guard.md"
+cat > "$VALID_FIXTURE" <<'EOF'
+# Staged Fixture
+
+| A   | B   |
+| --- | --- |
+| 1   | 2   |
+
+```js
+console.log("ok");
+```
+EOF
+cp "$VALID_FIXTURE" "$GUARD_FIXTURE"
+
 if ./skills/markdown-formatter/src/index.js --help > /dev/null 2>&1; then
     echo "✓ Staged index.js --help executed successfully"
 else
     echo "❌ FAILED: Could not execute staged index.js --help"
+    exit 1
+fi
+
+if ./skills/markdown-formatter/src/index.js --fences "$VALID_FIXTURE"; then
+    echo "✓ Staged --fences succeeded"
+else
+    echo "❌ FAILED: Staged --fences failed"
+    exit 1
+fi
+
+if ./skills/markdown-formatter/src/index.js --validate "$VALID_FIXTURE"; then
+    echo "✓ Staged --validate succeeded"
+else
+    echo "❌ FAILED: Staged --validate failed"
+    exit 1
+fi
+
+if ./skills/markdown-formatter/src/index.js --check "$VALID_FIXTURE"; then
+    echo "✓ Staged --check succeeded"
+else
+    echo "❌ FAILED: Staged --check failed"
+    exit 1
+fi
+
+if ./skills/markdown-formatter/src/index.js --guard "$GUARD_FIXTURE"; then
+    echo "✓ Staged --guard succeeded"
+else
+    echo "❌ FAILED: Staged --guard failed"
     exit 1
 fi
 

@@ -1,7 +1,7 @@
 const { describe, it } = require('node:test');
 const assert = require('node:assert/strict');
 const { spawnSync } = require('node:child_process');
-const { mkdtempSync, writeFileSync, rmSync } = require('node:fs');
+const { existsSync, mkdtempSync, readFileSync, writeFileSync, rmSync } = require('node:fs');
 const { join, resolve } = require('node:path');
 const { tmpdir } = require('node:os');
 
@@ -53,7 +53,25 @@ describe('markdown formatter CLI integration', () => {
       const result = runCli(['--verify', file]);
 
       assert.notStrictEqual(result.status, 0);
-      assert.equal(require('node:fs').readFileSync(file, 'utf8'), original);
+      assert.equal(readFileSync(file, 'utf8'), original);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it('--check --guard remains read-only and fails on unformatted files', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'markdown-formatter-guard-check-'));
+    const file = join(dir, 'dirty.md');
+    try {
+      const original = '# Dirty\n\n| A | B |\n|---|---|\n| 1 | 2 |\n';
+      writeFileSync(file, original);
+
+      const result = runCli(['--check', '--guard', file]);
+
+      assert.notStrictEqual(result.status, 0);
+      assert.match(result.stdout + result.stderr, /dirty\.md|Format issues/);
+      assert.equal(readFileSync(file, 'utf8'), original);
+      assert.equal(existsSync(`${file}.structure.json`), false);
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }

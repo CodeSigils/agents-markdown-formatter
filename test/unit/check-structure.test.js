@@ -45,6 +45,17 @@ describe('check-structure.js unit tests', () => {
         closer: null
       });
     });
+
+    it('should accept closing fences with independent 0-3 space indentation', async () => {
+      const content = ' ```js\nconsole.log("hello");\n```\n\n```text\nhello\n   ```';
+      const fences = extractFences(content);
+      const errors = validateStructure(content);
+
+      assert.strictEqual(fences.length, 2);
+      assert.deepStrictEqual(errors, []);
+      assert.strictEqual(fences[0].closer, '```');
+      assert.strictEqual(fences[1].closer, '```');
+    });
   });
 
   describe('extractTables function', () => {

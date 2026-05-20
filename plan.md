@@ -1,5 +1,12 @@
 # Refactoring Plan: Hermes Markdown Formatter Skill
 
+> **Repository-only planning document.** This file is maintainer and agent context
+> for building the formatter skill. Do not include `plan.md` in the installed
+> runtime payload or copy it into `~/.hermes/skills/markdown-formatter/`.
+> User-facing usage belongs in `README.md` and
+> `skills/markdown-formatter/SKILL.md`; release verification must continue to
+> prove that `plan.md` is excluded from staged installs.
+
 ## Goal
 
 Refactor `hermes-markdown-lint-skill` into a **Hermes Markdown Formatter Skill**. This is no longer only an Oxc integration under the old lint-skill identity: the shipped skill should be renamed, documented, and validated as a formatter-first skill powered by **Oxc's `oxfmt`** plus structural guardrails.
@@ -69,6 +76,31 @@ This repo tracks `oxfmt` as a **devDependency only**. The installed skill payloa
 - Breaking Markdown-formatting changes in a minor/major `oxfmt` release require a regression pass: run `npm test` and verify structural guards pass.
 - Check [github.com/oxc-project/oxc/releases](https://github.com/oxc-project/oxc/releases) for `oxfmt` changelog before upgrading.
 - Breaking changes between versions (marked `BREAKING` in changelog) that affect GFM/MDX formatting output must be evaluated before bumping.
+
+## Plan.md Lifecycle for Publishing
+
+`plan.md` should remain in the source repository while the implementation is
+still changing because it records decisions, migration context, and agent-facing
+guardrails that do not belong in the runtime skill. Treat it as development
+documentation, not product documentation.
+
+Before publishing a more complete public release:
+
+1. Keep `plan.md` repository-only unless there is a deliberate maintainer-docs
+   bundle separate from the runtime skill payload.
+2. Move durable user-facing guidance from `plan.md` into `README.md` or
+   `skills/markdown-formatter/SKILL.md` before release.
+3. Move durable architecture or historical rationale into a clearly labeled
+   maintainer doc such as `references/architecture.md` or
+   `references/history.md` if `plan.md` has become too long or too phase-based.
+4. Keep transient phase checklists, stale migration notes, and completed task
+   bookkeeping out of shipped docs.
+5. Run `bash scripts/staged-install-verify.sh` before claiming release
+   readiness; it is the source of truth that `plan.md` and other repo-only files
+   are excluded from the installed payload.
+6. If `plan.md` is moved or retired, update `AGENTS.md`, README references,
+   consistency checks, and CI in the same change so agents do not keep reading a
+   stale path.
 
 ## Current State Analysis
 
@@ -247,7 +279,7 @@ Implement in a new repository at `/home/sand/projects/agents-markdown-formatter`
 
 - [x] Add `.oxfmtrc.json` with Hermes-appropriate defaults (tabWidth=2, printWidth=100, endOfLine=lf, proseWrap=preserve, embeddedLanguageFormatting=off)
 - [x] Add `skills/markdown-formatter/src/index.js` to call oxfmt instead of `format-tables.js` + `npx markdownlint-cli2`
-- [x] ~~Add root `package.json` as development-only tooling with pinned `oxfmt` and scripts for tests/checks; keep it outside the release allowlist.~~ Created at repo root: scripts test/format/format:check/verify/guard; oxfmt as devDependency.
+- [x] ~~Add root `package.json` as development-only tooling with pinned `oxfmt` and scripts for tests/checks; keep it outside the release allowlist.~~ Created at repo root: test scripts run repository fixtures; format/check/verify scripts intentionally target only maintainer docs and shipped `SKILL.md`, not raw fixtures or prior art.
 - [x] Implement staged oxfmt binary resolution: local node_modules/.bin/oxfmt → PATH → fail with install instructions
 - [x] Ensure the wrapper never shells out to `npx` and never falls back to `markdownlint`, Prettier, mdformat, or any external Markdown linter/formatter
 - [x] Keep `validate` and `fences` subcommands working
@@ -337,17 +369,17 @@ test/
 
 Repository-level staged verification lives at `scripts/staged-install-verify.sh`; `test/staged-artifact/` is generated output and must remain untracked.
 
-Note: `check-all.js` lives at `skills/markdown-formatter/scripts/check-all.js` (not `test/`). Idempotence tests run against `fixtures/oxfmt-spike/` via `check-all.js` — no separate `fixtures/idempotence/` directory needed.
+Note: repository-only `scripts/check-all.js` runs fixture checks. It intentionally lives outside `skills/markdown-formatter/` so the installed runtime payload contains only the CLI and runtime guard scripts. Idempotence tests run against `fixtures/oxfmt-spike/` via `check-all.js` — no separate `fixtures/idempotence/` directory needed.
 
-| Directory              | Purpose                                                              |
-| :--------------------- | :------------------------------------------------------------------- |
-| `fixtures/current`     | Real-world docs, should format without errors                        |
-| `fixtures/oxfmt-spike` | Edge cases: idempotence, fence behavior, table alignment             |
-| `fixtures/violations`  | Malformed inputs the guard must detect (not fix)                     |
-| `unit/`                | Pure function tests: structural guard, fences, formatter             |
-| `integration/`         | End-to-end: CLI flags, guard pipeline, pre/post snapshot             |
-| `staged-artifact/`     | Ignored generated output from staged install verification            |
-| `check-all.js`         | Run structural checks against valid fixtures and expected violations |
+| Directory                 | Purpose                                                              |
+| :------------------------ | :------------------------------------------------------------------- |
+| `fixtures/current`        | Real-world docs, should format without errors                        |
+| `fixtures/oxfmt-spike`    | Edge cases: idempotence, fence behavior, table alignment             |
+| `fixtures/violations`     | Malformed inputs the guard must detect (not fix)                     |
+| `unit/`                   | Pure function tests: structural guard, fences, formatter             |
+| `integration/`            | End-to-end: CLI flags, guard pipeline, pre/post snapshot             |
+| `staged-artifact/`        | Ignored generated output from staged install verification            |
+| `../scripts/check-all.js` | Run structural checks against valid fixtures and expected violations |
 
 ### Phase 8: Testing
 
@@ -360,17 +392,18 @@ Note: `check-all.js` lives at `skills/markdown-formatter/scripts/check-all.js` (
 - [x] Create integration tests in `test/integration/`
   - [x] `cli.test.js` — CLI flags, recursive path handling, validation, and read-only verify behavior
 - [x] ~~Create `test/staged-artifact/verify-install.sh`~~ Replaced by repository-level `scripts/staged-install-verify.sh`; `test/staged-artifact/` is generated ignored output
-- [x] ~~Create `check-all.js`~~ Created at `skills/markdown-formatter/scripts/check-all.js`: validates clean fixtures and verifies violation fixtures fail at least one guard.
+- [x] ~~Create `check-all.js`~~ Created as repository-only `scripts/check-all.js`: validates clean fixtures and verifies violation fixtures fail at least one guard.
 - [x] Run unit tests: `node --test test/unit/*.test.js` (Node built-in runner)
 - [x] Run integration tests: `node --test test/integration/*.test.js` (Node built-in runner)
 - [x] Run staged artifact verification
 - [x] Run `node scripts/check-consistency.js` (dev-only) — must pass
-- [x] Run master structural test runner: `npm test` → `node skills/markdown-formatter/scripts/check-all.js`
+- [x] Run master structural test runner: `npm test` → `node scripts/check-all.js`
 
 ### Phase 9: Final Agent Guard Policy Review
 
 - [x] Review every agent-facing policy surface after implementation is complete: repository `AGENTS.md`, shipped `SKILL.md`, README agent sections, and CI docs.
 - [x] Confirm guard policies describe the final formatter behavior, not transitional implementation details.
+- [x] Add a low-overhead post-overhaul read-only audit trigger to `AGENTS.md` so major changes get a concise severity/evidence review without turning every small edit into an audit.
 - [x] Remove or explicitly label compatibility-only references to `markdown-lint`, `markdownlint-cli2`, `npx`, `.markdownlint.json`, `format-tables.js` as formatter, and old command paths.
 - [x] Confirm agent instructions do not tell agents to run dev-only checks from the installed user payload.
 - [x] Confirm shipped agent instructions mention only files and commands that actually exist in the installed allowlist.

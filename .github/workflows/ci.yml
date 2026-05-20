@@ -48,17 +48,29 @@ jobs:
     - name: Run structural guard tests
       run: npm test
 
-    - name: Run formatter check (clean fixtures only)
+    - name: Run unit tests
+      run: npm run test:unit
+
+    - name: Run integration tests
+      run: npm run test:integration
+
+    - name: Verify staged runtime payload
+      run: bash scripts/staged-install-verify.sh
+
+    - name: Run maintainer docs formatter check
+      run: npm run format:check
+
+    - name: Run formatter check on clean fixtures only
       run: node skills/markdown-formatter/src/index.js --check --all test/fixtures/current/ test/fixtures/oxfmt-spike/
 
-    - name: Run formatter check on MDX fixture
-      run: node skills/markdown-formatter/src/index.js --check test/fixtures/current/sample.mdx
-
-    - name: Test idempotence
+    - name: Test idempotence on fixture copies
       run: |
-        mkdir -p /tmp/idempotence
-        find test/fixtures/current/ test/fixtures/oxfmt-spike/ \( -name "*.md" -o -name "*.mdx" \) -exec cp {} /tmp/idempotence/ \;
-        node skills/markdown-formatter/src/index.js --all /tmp/idempotence/
-        cp -r /tmp/idempotence /tmp/idempotence_copy
-        node skills/markdown-formatter/src/index.js --all /tmp/idempotence/
-        diff -rq /tmp/idempotence /tmp/idempotence_copy && echo "Idempotence: PASS" || (echo "Idempotence: FAIL" && exit 1)
+        TMP_DIR=$(mktemp -d)
+        trap 'rm -rf "$TMP_DIR"' EXIT
+        mkdir -p "$TMP_DIR/input/current" "$TMP_DIR/input/oxfmt-spike"
+        cp -a test/fixtures/current/. "$TMP_DIR/input/current/"
+        cp -a test/fixtures/oxfmt-spike/. "$TMP_DIR/input/oxfmt-spike/"
+        node skills/markdown-formatter/src/index.js --all "$TMP_DIR/input/"
+        cp -a "$TMP_DIR/input" "$TMP_DIR/after-first-pass"
+        node skills/markdown-formatter/src/index.js --all "$TMP_DIR/input/"
+        diff -rq "$TMP_DIR/input" "$TMP_DIR/after-first-pass" && echo "Idempotence: PASS" || (echo "Idempotence: FAIL" && exit 1)

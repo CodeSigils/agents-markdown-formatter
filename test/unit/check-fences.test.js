@@ -16,6 +16,12 @@ describe('check-fences.js unit tests', () => {
     assert.match(errors[0], /Unclosed fence/);
   });
 
+  it('accepts closing fences with any valid independent 0-3 space indentation', () => {
+    const content = ' ```js\nconst x = 1;\n```\n\n```text\nhello\n   ```\n';
+
+    assert.deepStrictEqual(validateFences(content), []);
+  });
+
   it('detects whitespace-only language info strings', () => {
     const errors = validateFences('``` \nconst x = 1;\n```\n');
 
