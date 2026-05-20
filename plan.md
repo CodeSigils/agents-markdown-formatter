@@ -285,6 +285,7 @@ Implement in a new repository at `/home/sand/projects/agents-markdown-formatter`
   - Replace `node lint.js --check .` with `node lint.js --guard --all .`
   - Keep consistency check, fence validation, table validation
   - Add structural guard step
+  - CI file is validated by `scripts/check-consistency.js`: checks for markdownlint usage, violations/ inclusion, npx oxfmt, required steps (oxfmt download, version check, npm test)
 
 ### Phase 7: Shipping Strategy
 

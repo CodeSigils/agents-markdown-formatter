@@ -9,8 +9,17 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-    
+    strategy:
+      matrix:
+        node-version: [20]
+
     steps:
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ matrix.node-version }}
+
+    - name: Checkout code
     - name: Checkout code
       uses: actions/checkout@v4
     
@@ -26,26 +35,18 @@ jobs:
     - name: Run structural guard tests
       run: npm test
 
-    - name: Run formatter check
-      run: npm run format:check -- test/fixtures/
+    - name: Run formatter check (clean fixtures only)
+      run: node skills/markdown-formatter/src/index.js --check --all test/fixtures/current/ test/fixtures/oxfmt-spike/
 
     - name: Run formatter check on MDX fixture
       run: node skills/markdown-formatter/src/index.js --check test/fixtures/current/sample.mdx
 
     - name: Test idempotence
       run: |
-        # Format all markdown and MDX files and capture output
-        mkdir -p /tmp/formatted_first /tmp/formatted_second
-        cp test/fixtures/*/*.md test/fixtures/*/*.mdx /tmp/formatted_first/ 2>/dev/null || true
-        cp test/fixtures/*/*/*.md /tmp/formatted_first/ 2>/dev/null || true
-        cp test/fixtures/*/*.md test/fixtures/*/*.mdx /tmp/formatted_second/ 2>/dev/null || true
-        cp test/fixtures/*/*/*.md /tmp/formatted_second/ 2>/dev/null || true
-
-        # Run formatter first time
-        node skills/markdown-formatter/src/index.js /tmp/formatted_first/* 2>/dev/null || true
-
-        # Run formatter second time on same files
-        node skills/markdown-formatter/src/index.js /tmp/formatted_first/* 2>/dev/null || true
-
-        # Compare the outputs - should be identical (no changes on second pass)
-        diff -r /tmp/formatted_first /tmp/formatted_second && echo "Idempotence test passed" || (echo "Idempotence test failed: files changed on second pass" && exit 1)
+        set -e
+        mkdir -p /tmp/idempotence
+        find test/fixtures/current/ test/fixtures/oxfmt-spike/ -name "*.md" -o -name "*.mdx" | xargs -I{} cp {} /tmp/idempotence/
+        node skills/markdown-formatter/src/index.js --all /tmp/idempotence/
+        cp -r /tmp/idempotence /tmp/idempotence_copy
+        node skills/markdown-formatter/src/index.js --all /tmp/idempotence/
+        diff -rq /tmp/idempotence /tmp/idempotence_copy && echo "Idempotence: PASS" || (echo "Idempotence: FAIL — files changed on second pass" && exit 1)

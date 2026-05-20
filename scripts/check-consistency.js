@@ -13,6 +13,41 @@ const ROOT = resolve(__dirname, "..");
 
 // Files the plan.md "Target Repository / Skill Shape" section says should exist.
 // Stale plan references are errors; missing shipped files are errors.
+const CI_WORKFLOW_PATH = join(ROOT, ".github/workflows/ci.yml");
+const NODE_MIN_VERSION = 20;
+
+function validateCiWorkflow() {
+  const ci = read(".github/workflows/ci.yml");
+  if (!ci) {
+    warnings.push(".github/workflows/ci.yml not found — consider adding CI");
+    return;
+  }
+  const checks = [
+    { pattern: /markdownlint/i, label: "uses markdownlint (not oxfmt)" },
+    { pattern: /npx\s+markdown/i, label: "uses npx markdownlint" },
+    { pattern: /npx\s+oxfmt/i, label: "uses npx oxfmt (should download binary directly)" },
+    { pattern: /test\/fixtures\/violations/i, label: "includes violations/ in formatter check (will fail CI)" },
+  ];
+  for (const { pattern, label } of checks) {
+    if (pattern.test(ci)) {
+      errors.push(`ci.yml: ${label}`);
+    }
+  }
+  const required = [
+    { pattern: /oxfmt.*--version|oxfmt.*version/i, label: "verifies oxfmt version" },
+    { pattern: /npm\s+test/i, label: "runs npm test (structural guards)" },
+    { pattern: /oxfmt.*download|curl.*oxfmt/i, label: "downloads oxfmt binary" },
+  ];
+  for (const { pattern, label } of required) {
+    if (!pattern.test(ci)) {
+      warnings.push(`ci.yml: missing ${label}`);
+    }
+  }
+  if (!ci.includes(">=20") && !ci.includes("node-version")) {
+    warnings.push("ci.yml: no node-version specified (defaults to recent, should be fine)");
+  }
+}
+
 const PLAN_EXPECTED_SHIP = new Set([
   "AGENTS.md",
   "README.md",
@@ -239,6 +274,8 @@ for (const prefix of PAYLOAD_PREFIXES) {
     errors.push(`plan drift: unexpected file in skill payload: "${u}"`);
   }
 }
+
+validateCiWorkflow();
 
 if (errors.length > 0) {
   console.error("check-consistency ERRORS:");
