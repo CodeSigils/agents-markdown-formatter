@@ -32,20 +32,23 @@ jobs:
     - name: Run formatter check on fixtures
       run: node skills/markdown-formatter/src/index.js --check test/fixtures/
     
+    - name: Run formatter check on MDX fixture
+      run: node skills/markdown-formatter/src/index.js --check test/fixtures/current/sample.mdx
+
     - name: Test idempotence
       run: |
-        # Format all markdown files and capture output
+        # Format all markdown and MDX files and capture output
         mkdir -p /tmp/formatted_first /tmp/formatted_second
-        cp test/fixtures/*/*.md /tmp/formatted_first/ 2>/dev/null || true
+        cp test/fixtures/*/*.md test/fixtures/*/*.mdx /tmp/formatted_first/ 2>/dev/null || true
         cp test/fixtures/*/*/*.md /tmp/formatted_first/ 2>/dev/null || true
-        cp test/fixtures/*/*.md /tmp/formatted_second/ 2>/dev/null || true
+        cp test/fixtures/*/*.md test/fixtures/*/*.mdx /tmp/formatted_second/ 2>/dev/null || true
         cp test/fixtures/*/*/*.md /tmp/formatted_second/ 2>/dev/null || true
-        
+
         # Run formatter first time
-        node skills/markdown-formatter/src/index.js /tmp/formatted_first/*.md 2>/dev/null || true
-        
+        node skills/markdown-formatter/src/index.js /tmp/formatted_first/* 2>/dev/null || true
+
         # Run formatter second time on same files
-        node skills/markdown-formatter/src/index.js /tmp/formatted_first/*.md 2>/dev/null || true
-        
+        node skills/markdown-formatter/src/index.js /tmp/formatted_first/* 2>/dev/null || true
+
         # Compare the outputs - should be identical (no changes on second pass)
         diff -r /tmp/formatted_first /tmp/formatted_second && echo "Idempotence test passed" || (echo "Idempotence test failed: files changed on second pass" && exit 1)

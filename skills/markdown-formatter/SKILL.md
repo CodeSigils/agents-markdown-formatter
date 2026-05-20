@@ -14,13 +14,15 @@ metadata.hermes.tags:
 
 ## Scope
 
-This skill formats **GitHub-Flavored Markdown (GFM)**. Non-GFM dialects (MDX, Obsidian wiki links, Mermaid, Pandoc) are out of scope for v1.
+This skill formats **GitHub-Flavored Markdown (GFM)** and **MDX** (v1). Non-GFM dialects (Obsidian wiki links, Mermaid, Pandoc) are out of scope for v1.
 
-**In scope:** GFM tables, fenced code blocks, task lists, headings, lists, blockquotes, links, autolinks, inline code, strikethrough.
+**In scope:** GFM tables, fenced code blocks, task lists, headings, lists, blockquotes, links, autolinks, inline code, strikethrough. MDX files are processed as Markdown + JSX.
 
-**Out of scope:** MDX, frontmatter semantics, semantic rewriting. YAML frontmatter is preserved but not parsed.
+**Out of scope:** Obsidian wiki links, Mermaid validation, semantic rewriting. YAML frontmatter is preserved but not parsed.
 
-**`embeddedLanguageFormatting`:** Set to `"off"` in the default `.oxfmtrc` — code inside fenced blocks is left as-is.
+**MDX note:** Oxfmt handles MDX formatting. This skill does not validate JSX syntax or MDX imports/exports — structural guards apply GFM rules to the Markdown content only.
+
+**`embeddedLanguageFormatting`:** Set to `"off"` in the default `.oxfmtrc` — code inside fenced blocks is left as-is, which is required for predictable MDX behavior.
 
 ## Usage
 

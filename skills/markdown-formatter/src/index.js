@@ -102,7 +102,7 @@ async function findMarkdownFiles(dir) {
       if (!["node_modules", ".git"].includes(entry.name) && !entry.name.startsWith(".")) {
         files.push(...(await findMarkdownFiles(join(dir, entry.name))));
       }
-    } else if (entry.name.endsWith(".md") || entry.name.endsWith(".markdown")) {
+    } else if (entry.name.endsWith(".md") || entry.name.endsWith(".markdown") || entry.name.endsWith(".mdx")) {
       files.push(join(dir, entry.name));
     }
   }

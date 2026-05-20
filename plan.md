@@ -28,10 +28,12 @@ This formatter targets **GitHub-Flavored Markdown (GFM)** as the v1 compatibilit
 - Structural pre/post guards (fence counts, table column drift)
 
 **Out of scope (v1 — explicit):**
-- MDX, Obsidian wiki links, Mermaid validation
+- Obsidian wiki links, Mermaid validation
 - Frontmatter semantics (YAML frontmatter is preserved but not parsed/validated)
 - Pandoc dialects, semantic rewriting
 - `embeddedLanguageFormatting: "auto"` — defaults to `"off"` for v1
+
+**MDX note:** MDX is included in v1 scope. Oxfmt formats MDX as Markdown + JSX. This skill does not validate JSX syntax or MDX imports/exports — it applies GFM structural guards only. `embeddedLanguageFormatting: "off"` is required for predictable behavior with MDX code blocks.
 
 **Rationale:** GFM gives a clear, stable contract for GitHub READMEs and documentation. Attempting to support "Markdown generally" becomes a compatibility swamp. The structural guard is specifically GFM-table and GFM-fenced-code focused.
 
@@ -550,7 +552,8 @@ After EVERY implementation phase, run:
 | oxfmt produces different output than current pipeline | Keep `format-tables.js` as fallback/validate mode; regression test on all fixtures and compare structural invariants          |
 | oxfmt has gaps vs markdownlint rules                  | GFM scope excludes markdownlint policy rules — gaps are expected and out of scope; document GFM-specific gaps only            |
 | Structural drift from oxfmt                           | Pre/post structural guard catches fence/table drift per GFM contract                                                           |
-| Embedded formatting changes code fences unexpectedly  | v1 scope sets `embeddedLanguageFormatting: "off"` — MDX and embedded JS/TS formatting explicitly out of scope               |
+| Embedded formatting changes code fences unexpectedly  | v1 scope sets `embeddedLanguageFormatting: "off"` — embedded JS/TS formatting explicitly out of scope                          |
+| Oxfmt breaks MDX JSX/import semantics                | MDX support is GFM structural only — Oxfmt does not validate JSX; this is a known gap and acceptable for a formatter v1       |
 | Dev dependencies leak into shipped skill              | Root `package.json` is dev-only; staged install allowlist fails if package files, lockfiles, or `node_modules/` are shipped   |
 | `npx` reintroduces runtime drift                      | Product wrapper never calls `npx`; it resolves local dev binary, then PATH, then fails with setup instructions                |
 | Hermes hook system incompatibility                    | `post-write.js` is a shell hook, not affected by formatter change                                                             |

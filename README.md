@@ -2,9 +2,9 @@
 
 [![v1.0.0](https://img.shields.io/badge/version-1.0.0-blue.svg)](skills/markdown-formatter/SKILL.md)
 
-Formatter-first **GitHub-Flavored Markdown (GFM)** skill for AI agents — not a general-purpose Markdown beautifier.
+Formatter-first **GitHub-Flavored Markdown (GFM) and MDX** skill for AI agents.
 
-This repository builds a GFM formatter skill for AI agents powered by Oxc's `oxfmt` with structural guardrails for fences, tables, and embedded-code blast radius. The v1 scope is explicit GFM only; non-GFM dialects (MDX, Obsidian, Mermaid) are out of scope.
+This repository builds a GFM+MDX formatter skill for AI agents powered by Oxc's `oxfmt` with structural guardrails for fences, tables, and embedded-code blast radius. The v1 scope is explicit GFM + MDX; non-GFM dialects (Obsidian, Mermaid, Pandoc) are out of scope.
 
 ## What It Does
 
