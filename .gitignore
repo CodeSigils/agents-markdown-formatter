@@ -3,6 +3,7 @@ node_modules/
 coverage/
 dist/
 *.log
+*.snap
 
 # Agent/tool local state
 .omo/
