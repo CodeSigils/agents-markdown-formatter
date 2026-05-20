@@ -6,10 +6,58 @@
 
 "use strict";
 
-const { readFileSync } = require("fs");
+const { readFileSync, existsSync, readdirSync } = require("fs");
 const { join, resolve } = require("path");
 
 const ROOT = resolve(__dirname, "..");
+
+// Files the plan.md "Target Repository / Skill Shape" section says should exist.
+// Stale plan references are errors; missing shipped files are errors.
+const PLAN_EXPECTED_SHIP = new Set([
+  "AGENTS.md",
+  "README.md",
+  "plan.md",
+  ".oxfmtrc.json",
+  ".github/workflows/ci.yml",
+  "package.json",
+  "scripts/check-consistency.js",
+  "scripts/staged-install-verify.sh",
+  "skills/markdown-formatter/SKILL.md",
+  "skills/markdown-formatter/src/index.js",
+  "skills/markdown-formatter/scripts/check-fences.js",
+  "skills/markdown-formatter/scripts/check-structure.js",
+  "skills/markdown-formatter/scripts/check-tables.js",
+  "skills/markdown-formatter/references/",
+  "test/",
+]);
+
+// Artifacts plan.md describes but were NOT created (and are intentionally skipped).
+const PLAN_STALE_ARTIFACTS = new Set([
+  "lint.js",
+  "mdformat.js",
+  "post-write.js",
+  "references/rules.md",
+  "references/table-validate.js",
+  "test/formatter.test.js",
+  "test/structure.test.js",
+  "test/cli.test.js",
+]);
+
+function findAllFiles(dir, base = "") {
+  const results = [];
+  try {
+    for (const entry of readdirSync(join(dir, base), { withFileTypes: true })) {
+      const path = base ? `${base}/${entry.name}` : entry.name;
+      if (entry.isDirectory()) {
+        results.push(path + "/");
+        results.push(...findAllFiles(dir, path));
+      } else {
+        results.push(path);
+      }
+    }
+  } catch { /* ignore */ }
+  return results;
+}
 
 function read(file) {
   try {
@@ -121,6 +169,47 @@ for (const [file, content] of [
     if (pattern.test(content)) {
       errors.push(`stale ref in ${file}: "${reason}"`);
     }
+  }
+}
+
+const EXCLUDE_DIRS = new Set(["node_modules", ".git", ".omo", ".open-mem", "oxfmt-spike"]);
+const allFiles = findAllFiles(ROOT).filter((f) => {
+  const parts = f.split("/");
+  return !parts.some((p) => EXCLUDE_DIRS.has(p));
+});
+
+for (const expected of PLAN_EXPECTED_SHIP) {
+  if (expected.endsWith("/")) {
+    if (!allFiles.some((f) => f.startsWith(expected))) {
+      errors.push(`plan drift: expected directory "${expected}" is missing`);
+    }
+  } else if (!existsSync(join(ROOT, expected))) {
+    errors.push(`plan drift: expected file "${expected}" is missing`);
+  }
+}
+
+for (const stale of PLAN_STALE_ARTIFACTS) {
+  if (existsSync(join(ROOT, stale))) {
+    errors.push(`plan drift: stale artifact "${stale}" exists but should not`);
+  }
+}
+
+const PAYLOAD_PREFIXES = [
+  "skills/markdown-formatter/src/",
+  "skills/markdown-formatter/scripts/",
+];
+const KNOWN_PAYLOAD_CHECKS = new Set([
+  "check-all.js", "check-fences.js", "check-structure.js", "check-tables.js",
+]);
+for (const prefix of PAYLOAD_PREFIXES) {
+  const unexpected = allFiles.filter((f) => {
+    if (!f.startsWith(prefix)) return false;
+    if (f.endsWith("/")) return false;
+    const name = f.slice(prefix.length);
+    return name.startsWith("check-") && !KNOWN_PAYLOAD_CHECKS.has(name);
+  });
+  for (const u of unexpected) {
+    errors.push(`plan drift: unexpected file in skill payload: "${u}"`);
   }
 }
 
