@@ -34,18 +34,12 @@ jobs:
     - name: Run anti-drift checks
       run: node scripts/check-consistency.js
 
-    - name: Download oxfmt binary
-      run: |
-        OXFMT_VERSION=$(node -e "const p=require('./package.json'); console.log(p.devDependencies.oxfmt.replace(/^\\^/,''))")
-        curl -sL "https://github.com/oxc-project/oxc/releases/download/apps_v${OXFMT_VERSION}/oxfmt-x86_64-unknown-linux-musl.tar.gz" | tar xz
-        chmod +x oxfmt
-        echo "$PWD" >> $GITHUB_PATH
-
     - name: Verify oxfmt version
       run: |
-        ./oxfmt --version
-        EXPECTED=$(node -e "const p=require('./package.json'); console.log(p.devDependencies.oxfmt.replace(/^\\^/,''))")
-        ACTUAL=$(./oxfmt --version | awk '{print $2}')
+        OXFMT=./node_modules/.bin/oxfmt
+        "$OXFMT" --version
+        EXPECTED=$(node -e "const p=require('./package.json'); console.log(p.devDependencies.oxfmt)")
+        ACTUAL=$("$OXFMT" --version | awk '{print $2}')
         if [ "$ACTUAL" != "$EXPECTED" ]; then
           echo "ERROR: oxfmt version mismatch (expected $EXPECTED, got $ACTUAL)"
           exit 1

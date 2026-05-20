@@ -4,7 +4,7 @@
 
 Refactor `hermes-markdown-lint-skill` into a **Hermes Markdown Formatter Skill**. This is no longer only an Oxc integration under the old lint-skill identity: the shipped skill should be renamed, documented, and validated as a formatter-first skill powered by **Oxc's `oxfmt`** plus structural guardrails.
 
-The new formatter replaces the `markdownlint-cli2` + `format-tables.js` formatting pipeline while preserving Hermes-specific patterns: metadata, post-write hooks, agent governance, safety checks, consistency checks, and a zero-install user experience.
+The new formatter replaces the historical `markdownlint-cli2` + `format-tables.js` formatting pipeline while preserving Hermes-specific patterns: metadata, agent governance, safety checks, consistency checks, and a zero-install runtime payload.
 
 **Scope:** `/home/sand/projects/hermes-markdown-lint-skill/`
 
@@ -21,6 +21,7 @@ The new formatter replaces the `markdownlint-cli2` + `format-tables.js` formatti
 This formatter targets **GitHub-Flavored Markdown (GFM)** as the v1 compatibility baseline. Non-GFM dialects are out of scope unless explicitly added later through dialect-specific profiles.
 
 **In scope (v1):**
+
 - GFM tables (alignment, column consistency)
 - Fenced code blocks (language info strings, tilde vs backtick)
 - Task lists, headings, lists, blockquotes
@@ -28,6 +29,7 @@ This formatter targets **GitHub-Flavored Markdown (GFM)** as the v1 compatibilit
 - Structural pre/post guards (fence counts, table column drift)
 
 **Out of scope (v1 — explicit):**
+
 - Obsidian wiki links, Mermaid validation
 - Frontmatter semantics (YAML frontmatter is preserved but not parsed/validated)
 - Pandoc dialects, semantic rewriting
@@ -39,7 +41,7 @@ This formatter targets **GitHub-Flavored Markdown (GFM)** as the v1 compatibilit
 
 ---
 
-## External Resources to be Aware off
+## External resources
 
 <https://github.com/CodeSigils/markdown-oxc-spike>
 <https://oxc.rs/docs/guide/usage/formatter.md>
@@ -61,6 +63,7 @@ This formatter targets **GitHub-Flavored Markdown (GFM)** as the v1 compatibilit
 This repo tracks `oxfmt` as a **devDependency only**. The installed skill payload ships zero dependencies — users resolve `oxfmt` themselves via their own tooling. Node.js `>=20` is required (ES2024 features, improved test runner, better error messages).
 
 **Rules:**
+
 - `oxfmt` must be pinned to an exact version in `package.json` devDependencies (no ranges in committed files).
 - `scripts/check-consistency.js` warns when `package.json` `oxfmt` version is behind the latest release.
 - Breaking Markdown-formatting changes in a minor/major `oxfmt` release require a regression pass: run `npm test` and verify structural guards pass.
@@ -69,17 +72,17 @@ This repo tracks `oxfmt` as a **devDependency only**. The installed skill payloa
 
 ## Current State Analysis
 
-### Hermes Repo Structure
+### Historical Hermes Repo Structure
 
 > ⚠️ **Historical — this repo was created fresh as `agents-markdown-formatter`.** The old `hermes-markdown-lint-skill/` structure (lint.js wrappers, markdownlint-cli2 pipeline, format-tables.js) is prior art only. See `references/prior-art/` for preserved artifacts.
 
-### Current Pipeline
+### Historical Pipeline
 
 ```
 format-tables.js (custom Node.js) → markdownlint-cli2 (via npx) → Success/Error
 ```
 
-### Current Architecture Features
+### Historical Architecture Features
 
 - **Zero runtime dependencies** — no `package.json` in shipped skill; dev-only `package.json` at repo root only; no `node_modules/` in staged payload
 - **Hermes-specific metadata** in SKILL.md frontmatter (`version`, `author`, `metadata.hermes`)
@@ -90,7 +93,7 @@ format-tables.js (custom Node.js) → markdownlint-cli2 (via npx) → Success/Er
 - **CJK/emoji width awareness** — `stringWidth()` handles wide characters in table padding
 - **No bash scripts** — pure Node.js, cross-platform
 
-### Known Issues
+### Historical Issues
 
 - `markdownlint-cli2` via `npx` has first-run latency (download time)
 - Two separate tools for formatting (tables + lint) means two passes
@@ -124,14 +127,14 @@ agents-markdown-formatter/             # Fresh repo — not hermes-markdown-lint
 │       ├── SKILL.md                    # Skill definition
 │       ├── src/
 │       │   └── index.js                # Canonical formatter CLI
-│       ├── scripts/
-│       │   ├── check-all.js            # Run all guards on globbed files
-│       │   ├── check-fences.js         # Fenced code block validator
-│       │   ├── check-structure.js      # Structural drift guard
-│       │   └── check-tables.js        # Table column validator
-│       └── references/                 # Reserved for future dialect profiles
+│       └── scripts/
+│           ├── check-fences.js         # Fenced code block validator
+│           ├── check-structure.js      # Structural drift guard
+│           └── check-tables.js         # Table column validator
 └── test/
-    └── fixtures/                       # Phase 8: unit/integration tests
+    ├── fixtures/                       # Formatter fixtures
+    ├── integration/                    # CLI integration tests
+    └── unit/                           # Helper/module unit tests
 ```
 
 ### Formatting Pipeline
@@ -165,15 +168,14 @@ agents-markdown-formatter/             # Fresh repo — not hermes-markdown-lint
 
 1. **Rename the skill payload** from `skills/markdown-lint/` to `skills/markdown-formatter/`.
 2. **Rename the skill metadata** from `name: markdown-lint` to `name: markdown-formatter`.
-3. **Introduce a formatter CLI** at `skills/markdown-formatter/src/index.js` and optionally expose root wrappers (`lint.js` for compatibility, `mdformat.js` for the new identity).
+3. **Introduce a formatter CLI** at `skills/markdown-formatter/src/index.js`.
 4. **Replace** `markdownlint-cli2` via `npx` with `oxfmt` as the primary formatter.
 5. **Keep** `check-fences.js` because oxfmt does not validate fence structure.
 6. **Keep** `check-consistency.js` because formatter docs/config drift is still a release blocker.
-7. **Keep** `post-write.js` because Hermes hook integration remains part of the value proposition.
-8. **Add** structural guard (`check-structure.js`) adapted from the opencode formatter skill.
-9. **Simplify or replace** `format-tables.js` with validate-only table-column checking; oxfmt owns table formatting.
-10. **Remove** `.markdownlint.json` from the shipped formatter path; replace it with `.oxfmtrc.json`.
-11. **Update** `SKILL.md`, `AGENTS.md`, `README.md`, CI, and tests to describe a formatter skill.
+7. **Add** structural guard (`check-structure.js`) adapted from the opencode formatter skill.
+8. **Replace** `format-tables.js` with validate-only table-column checking; oxfmt owns table formatting.
+9. **Remove** `.markdownlint.json` from the shipped formatter path; use `.oxfmtrc.json` as repository-only formatter config.
+10. **Update** `SKILL.md`, `AGENTS.md`, `README.md`, CI, and tests to describe a formatter skill.
 
 ---
 
@@ -282,14 +284,14 @@ Implement in a new repository at `/home/sand/projects/agents-markdown-formatter`
   - Remove stale content (markdownlint references, npx commands)
 - [x] ~~Update `references/rules.md`~~ — intentionally skipped: oxfmt official docs serve this purpose; no separate rules.md needed for GFM-first formatter.
 - [x] Create CI workflow at `.github/workflows/ci.yml` (if not exists) or update existing:
-  - Replace `node lint.js --check .` with `node lint.js --guard --all .`
+  - Use `node skills/markdown-formatter/src/index.js` as the canonical formatter command
   - Keep consistency check, fence validation, table validation
   - Add structural guard step
-  - CI file is validated by `scripts/check-consistency.js`: checks for markdownlint usage, violations/ inclusion, npx oxfmt, required steps (oxfmt download, version check, npm test)
+  - CI file is validated by `scripts/check-consistency.js`: checks for markdownlint usage, violations/ inclusion, npx oxfmt, required pinned npm install/version check/npm test steps
 
 ### Phase 7: Shipping Strategy
 
-- [x] Define a release allowlist for the installed skill payload. Ship only runtime files under `skills/markdown-formatter/` that are needed by Hermes at use time: `SKILL.md`, formatter CLI source, guard scripts, runtime references, and Oxfmt config.
+- [x] Define a release allowlist for the installed skill payload. Ship only runtime files under `skills/markdown-formatter/` that are needed by Hermes at use time: `SKILL.md`, formatter CLI source, and guard scripts.
 - [x] Keep repository-only planning, tests, fixtures, and development utilities out of the installed user payload: `plan.md`, `AGENTS.md`, `README.md`, `test/`, CI files, dev-only `scripts/`, `package.json`, lockfiles, `node_modules/`, coverage, and generated local state.
 - [x] Add a packaging/install verification task that builds or stages the exact install artifact into a temp directory and lists the files that would be shipped before release.
 - [x] Document the zero-dependency runtime contract: pure Node.js wrappers plus an externally resolved `oxfmt` binary; no bundled test dependencies, planning files, npm dev dependencies, lockfiles, `package.json`, or generated agent state in the installed skill.
@@ -336,43 +338,43 @@ test/
 
 Note: `check-all.js` lives at `skills/markdown-formatter/scripts/check-all.js` (not `test/`). Idempotence tests run against `fixtures/oxfmt-spike/` via `check-all.js` — no separate `fixtures/idempotence/` directory needed.
 
-| Directory           | Purpose                                                       |
-| :----------------- | :------------------------------------------------------------ |
-| `fixtures/current`    | Real-world docs, should format without errors                    |
-| `fixtures/oxfmt-spike`| Edge cases: idempotence, fence behavior, table alignment          |
-| `fixtures/violations` | Malformed inputs the guard must detect (not fix)                  |
-| `fixtures/idempotence`| Files that converge on second formatter pass                      |
-| `unit/`               | Pure function tests: structural guard, fences, formatter          |
-| `integration/`         | End-to-end: CLI flags, guard pipeline, pre/post snapshot          |
-| `staged-artifact/`     | Release gate: verify shipped files match allowlist               |
-| `check-all.js`         | Run all tests in sequence: unit → integration → staged artifact   |
+| Directory              | Purpose                                                         |
+| :--------------------- | :-------------------------------------------------------------- |
+| `fixtures/current`     | Real-world docs, should format without errors                   |
+| `fixtures/oxfmt-spike` | Edge cases: idempotence, fence behavior, table alignment        |
+| `fixtures/violations`  | Malformed inputs the guard must detect (not fix)                |
+| `fixtures/idempotence` | Files that converge on second formatter pass                    |
+| `unit/`                | Pure function tests: structural guard, fences, formatter        |
+| `integration/`         | End-to-end: CLI flags, guard pipeline, pre/post snapshot        |
+| `staged-artifact/`     | Release gate: verify shipped files match allowlist              |
+| `check-all.js`         | Run all tests in sequence: unit → integration → staged artifact |
 
 ### Phase 8: Testing
 
 - [x] ~~Create violation fixtures in `test/fixtures/violations/`~~ Committed in a99fe1e: fence-mismatch.md, table-column-drift.md, fence-untitled.md + structure snapshots
-- [ ] Create unit tests in `test/unit/`
-  - `check-structure.test.js` — structural guard logic
-  - `check-fences.test.js` — fence validation logic
-  - `formatter.test.js` — formatter wrapper logic
-- [ ] Create integration tests in `test/integration/`
-  - `cli.test.js` — CLI flags and exit codes
-  - `guard.test.js` — pre/post snapshot pipeline
+- [x] Create unit tests in `test/unit/`
+  - [x] `check-structure.test.js` — structural guard logic
+  - [x] `check-fences.test.js` — fence validation logic
+  - [x] `check-tables.test.js` — table validation logic
+  - [x] `formatter.test.js` — formatter wrapper logic
+- [x] Create integration tests in `test/integration/`
+  - [x] `cli.test.js` — CLI flags, recursive path handling, validation, and read-only verify behavior
 - [x] ~~Create `test/staged-artifact/verify-install.sh`~~ Committed in staged-install-verify.sh
-- [x] ~~Create `check-all.js`~~ Created at `skills/markdown-formatter/scripts/check-all.js`: globs .md/.mdx from directories, runs check-structure/fix/fences in sequence, exit 0/1. 15 fixture files verified.
-- [ ] Run unit tests: `node --test test/unit/*.test.js` (Node built-in runner)
-- [ ] Run integration tests: `node --test test/integration/*.test.js` (Node built-in runner)
-- [ ] Run staged artifact verification
-- [ ] Run `node skills/markdown-formatter/scripts/check-consistency.js` (dev-only) — must pass
-- [ ] Run master test runner: `npm test` → `node skills/markdown-formatter/scripts/check-all.js` (all layers in sequence)
+- [x] ~~Create `check-all.js`~~ Created at `skills/markdown-formatter/scripts/check-all.js`: validates clean fixtures and verifies violation fixtures fail at least one guard.
+- [x] Run unit tests: `node --test test/unit/*.test.js` (Node built-in runner)
+- [x] Run integration tests: `node --test test/integration/*.test.js` (Node built-in runner)
+- [x] Run staged artifact verification
+- [x] Run `node scripts/check-consistency.js` (dev-only) — must pass
+- [x] Run master test runner: `npm test` → `node skills/markdown-formatter/scripts/check-all.js` (all layers in sequence)
 
 ### Phase 9: Final Agent Guard Policy Review
 
-  - [ ] Review every agent-facing policy surface after implementation is complete: repository `AGENTS.md`, shipped `SKILL.md`, README agent sections, CI docs, and migration notes.
-- [ ] Confirm guard policies describe the final formatter behavior, not transitional implementation details.
-- [ ] Remove or explicitly label compatibility-only references to `markdown-lint`, `markdownlint-cli2`, `npx`, `.markdownlint.json`, `format-tables.js` as formatter, and old command paths.
-- [ ] Confirm agent instructions do not tell agents to run dev-only checks from the installed user payload.
-- [ ] Confirm shipped agent instructions mention only files and commands that actually exist in the installed allowlist.
-- [ ] Run stale-text searches and `node skills/markdown-formatter/scripts/check-consistency.js` after the final policy review.
+- [x] Review every agent-facing policy surface after implementation is complete: repository `AGENTS.md`, shipped `SKILL.md`, README agent sections, CI docs, and migration notes.
+- [x] Confirm guard policies describe the final formatter behavior, not transitional implementation details.
+- [x] Remove or explicitly label compatibility-only references to `markdown-lint`, `markdownlint-cli2`, `npx`, `.markdownlint.json`, `format-tables.js` as formatter, and old command paths.
+- [x] Confirm agent instructions do not tell agents to run dev-only checks from the installed user payload.
+- [x] Confirm shipped agent instructions mention only files and commands that actually exist in the installed allowlist.
+- [x] Run stale-text searches and `node scripts/check-consistency.js` after the final policy review.
 
 ---
 
@@ -399,15 +401,10 @@ Ship from an explicit runtime allowlist, not from the whole repository. The inst
 ├── SKILL.md                        # Skill definition (Hermes-compatible frontmatter)
 ├── src/
 │   └── index.js                    # Canonical formatter CLI
-├── lint.js                         # Optional compatibility wrapper only
 ├── scripts/
 │   ├── check-fences.js             # Fenced code block validator
-│   ├── check-structure.js          # Structural guard (NEW)
-│   └── post-write.js               # Hermes hook (unchanged)
-└── references/
-    ├── table-validate.js           # Validate-only table guard, if retained
-    ├── rules.md                    # Updated rule table
-    └── .oxfmtrc.json               # Oxfmt config (NEW, replaces .markdownlint.json)
+│   ├── check-structure.js          # Structural snapshot and drift guard
+│   └── check-tables.js             # Table column validator
 ```
 
 Before release, stage that allowlist into a temporary directory and review the file list. The release should fail if the staged install artifact contains planning docs, tests, fixtures, dev dependencies, generated local state, or repository-only governance files.
@@ -484,13 +481,13 @@ Phase B, only after CLI/guard/tests pass:
 
 ### What Must Stay Synchronized
 
-| File Pair                       | What to Check                           |
-| :------------------------------ | :-------------------------------------- |
-| README.md ↔ SKILL.md            | Version badge matches frontmatter       |
-| .oxfmtrc.json ↔ README          | Config matches documented behavior      |
-| CI workflow ↔ README            | Commands match documentation            |
-| CLI flags ↔ README              | All flags documented, none stale        |
-| plan.md ↔ repo reality          | Implemented files match plan target    |
+| File Pair              | What to Check                       |
+| :--------------------- | :---------------------------------- |
+| README.md ↔ SKILL.md   | Version badge matches frontmatter   |
+| .oxfmtrc.json ↔ README | Config matches documented behavior  |
+| CI workflow ↔ README   | Commands match documentation        |
+| CLI flags ↔ README     | All flags documented, none stale    |
+| plan.md ↔ repo reality | Implemented files match plan target |
 
 ### Check-Consistency.js Updates
 
@@ -517,19 +514,19 @@ After EVERY implementation phase, run:
 
 ## Risk Mitigation
 
-| Risk                                                  | Mitigation                                                                                                                    |
-| :---------------------------------------------------- | :---------------------------------------------------------------------------------------------------------------------------- |
-| oxfmt produces different output than current pipeline | Keep `format-tables.js` as fallback/validate mode; regression test on all fixtures and compare structural invariants          |
-| oxfmt has gaps vs markdownlint rules                  | GFM scope excludes markdownlint policy rules — gaps are expected and out of scope; document GFM-specific gaps only            |
-| Structural drift from oxfmt                           | Pre/post structural guard catches fence/table drift per GFM contract                                                           |
-| Embedded formatting changes code fences unexpectedly  | v1 scope sets `embeddedLanguageFormatting: "off"` — embedded JS/TS formatting explicitly out of scope                          |
-| Oxfmt breaks MDX JSX/import semantics                | MDX support is GFM structural only — Oxfmt does not validate JSX; this is a known gap and acceptable for a formatter v1       |
-| Dev dependencies leak into shipped skill              | Root `package.json` is dev-only; staged install allowlist fails if package files, lockfiles, or `node_modules/` are shipped   |
-| `npx` reintroduces runtime drift                      | Product wrapper never calls `npx`; it resolves local dev binary, then PATH, then fails with setup instructions                |
-| Hermes hook system incompatibility                    | `post-write.js` is a shell hook, not affected by formatter change                                                             |
-| Users with existing `markdown-lint` installs          | Provide migration note and optional compatibility wrapper                                                                     |
-| Users with existing `.markdownlint.json` configs      | Formatter ignores it; docs explain `.oxfmtrc.json` replacement                                                                |
-| Missing oxfmt binary                                  | Fail with actionable install/setup instructions in Phase A; add cached download only after wrapper behavior is proven         |
+| Risk                                                  | Mitigation                                                                                                                  |
+| :---------------------------------------------------- | :-------------------------------------------------------------------------------------------------------------------------- |
+| oxfmt produces different output than current pipeline | Keep `format-tables.js` as fallback/validate mode; regression test on all fixtures and compare structural invariants        |
+| oxfmt has gaps vs markdownlint rules                  | GFM scope excludes markdownlint policy rules — gaps are expected and out of scope; document GFM-specific gaps only          |
+| Structural drift from oxfmt                           | Pre/post structural guard catches fence/table drift per GFM contract                                                        |
+| Embedded formatting changes code fences unexpectedly  | v1 scope sets `embeddedLanguageFormatting: "off"` — embedded JS/TS formatting explicitly out of scope                       |
+| Oxfmt breaks MDX JSX/import semantics                 | MDX support is GFM structural only — Oxfmt does not validate JSX; this is a known gap and acceptable for a formatter v1     |
+| Dev dependencies leak into shipped skill              | Root `package.json` is dev-only; staged install allowlist fails if package files, lockfiles, or `node_modules/` are shipped |
+| `npx` reintroduces runtime drift                      | Product wrapper never calls `npx`; it resolves local dev binary, then PATH, then fails with setup instructions              |
+| Hermes hook system incompatibility                    | `post-write.js` is a shell hook, not affected by formatter change                                                           |
+| Users with existing `markdown-lint` installs          | Provide migration note and optional compatibility wrapper                                                                   |
+| Users with existing `.markdownlint.json` configs      | Formatter ignores it; docs explain `.oxfmtrc.json` replacement                                                              |
+| Missing oxfmt binary                                  | Fail with actionable install/setup instructions in Phase A; add cached download only after wrapper behavior is proven       |
 
 ---
 

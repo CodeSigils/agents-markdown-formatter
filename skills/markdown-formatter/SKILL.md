@@ -27,18 +27,18 @@ This skill formats **GitHub-Flavored Markdown (GFM)** and **MDX** (v1). Non-GFM 
 ## Usage
 
 ```bash
-node skills/markdown-formatter/src/index.js [options] <path>
+node skills/markdown-formatter/src/index.js [options] <path...>
 ```
 
 ### Options
 
 - `--check`: Check if files are formatted correctly (read-only, exits with code 1 if unformatted)
 - `--fix`: Format files in-place (default behavior)
-- `--all`: Process all files (including those ignored by git)
+- `--all`: Process directory inputs recursively; accepts multiple paths
 - `--guard`: Enable structural safety checks (fence count, table alignment)
 - `--verify`: Run formatter and check structural integrity without writing changes
 - `--fences`: Validate fenced code block language info strings
-- `--validate`: Full validation (implies --guard and --fences)
+- `--validate`: Run structural, fence, and table validations
 - `--dry-run`: Show what would be changed without writing files
 - `--help`: Display help message
 
@@ -53,6 +53,7 @@ The formatter first attempts to use a locally installed `oxfmt` (from `node_modu
 
 - `.md`
 - `.markdown`
+- `.mdx`
 
 ## Agent Behavior
 
@@ -71,27 +72,31 @@ Agents should run the markdown formatter after creating or editing any Markdown 
 ## Examples
 
 Check formatting without changes:
+
 ```bash
-node skills/markdown-formatter/src/index.js --check docs/
+node skills/markdown-formatter/src/index.js --check --all docs/
 ```
 
 Format files with structural guards:
+
 ```bash
 node skills/markdown-formatter/src/index.js --fix --guard README.md
 ```
 
-Validate structural integrity only:
+Verify formatting, idempotence, and structural integrity without writes:
+
 ```bash
-node skills/markdown-formatter/src/index.js --verify --fences ch01.md ch02.md
+node skills/markdown-formatter/src/index.js --verify ch01.md ch02.md
 ```
 
 Full validation workflow:
+
 ```bash
-node skills/markdown-formatter/src/index.js --validate --all
+node skills/markdown-formatter/src/index.js --validate --all docs/ notes/
 ```
 
 ## References
 
 - Oxfmt documentation: https://oxc.rs/docs/guide/usage/formatter.md
-- Spike findings: See `references/prior-art/` for implementation research
+- Spike findings: See the repository planning and fixture documentation for implementation research
 - Agent coordination: Refer to `AGENTS.md` for markdown validation policy

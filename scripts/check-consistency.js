@@ -25,7 +25,7 @@ function validateCiWorkflow() {
   const checks = [
     { pattern: /markdownlint/i, label: "uses markdownlint (not oxfmt)" },
     { pattern: /npx\s+markdown/i, label: "uses npx markdownlint" },
-    { pattern: /npx\s+oxfmt/i, label: "uses npx oxfmt (should download binary directly)" },
+    { pattern: /npx\s+oxfmt/i, label: "uses npx oxfmt (should use pinned npm dependency or PATH)" },
     { pattern: /test\/fixtures\/violations/i, label: "includes violations/ in formatter check (will fail CI)" },
   ];
   for (const { pattern, label } of checks) {
@@ -36,7 +36,7 @@ function validateCiWorkflow() {
   const required = [
     { pattern: /oxfmt.*--version|oxfmt.*version/i, label: "verifies oxfmt version" },
     { pattern: /npm\s+test/i, label: "runs npm test (structural guards)" },
-    { pattern: /oxfmt.*download|curl.*oxfmt/i, label: "downloads oxfmt binary" },
+    { pattern: /node_modules\/\.bin\/oxfmt|npm\s+ci/i, label: "uses pinned npm oxfmt install" },
   ];
   for (const { pattern, label } of required) {
     if (!pattern.test(ci)) {
@@ -148,10 +148,14 @@ if (pkgJson) {
     const pkgVersion = devDeps.oxfmt;
     if (pkgVersion) {
       const latest = "0.51.0";
-      if (pkgVersion !== latest && !pkgVersion.startsWith("^" + latest)) {
-        warnings.push(
-          `oxfmt in package.json is ${pkgVersion}, latest is ${latest} — consider upgrading`
-        );
+      if (pkgVersion !== latest) {
+        if (/^[~^*><=]/.test(pkgVersion)) {
+          errors.push(`oxfmt in package.json must be pinned exactly; found "${pkgVersion}"`);
+        } else {
+          warnings.push(
+            `oxfmt in package.json is ${pkgVersion}, latest is ${latest} — consider upgrading`
+          );
+        }
       }
     } else {
       warnings.push("oxfmt not found in package.json devDependencies");

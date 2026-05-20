@@ -8,13 +8,13 @@
     "test:verbose": "node skills/markdown-formatter/scripts/check-all.js test/fixtures/",
     "test:unit": "node --test test/unit/*.test.js",
     "test:integration": "node --test test/integration/*.test.js",
-    "format": "node skills/markdown-formatter/src/index.js --fix .",
-    "format:check": "node skills/markdown-formatter/src/index.js --check .",
-    "verify": "node skills/markdown-formatter/src/index.js --verify .",
-    "guard": "node skills/markdown-formatter/src/index.js --guard ."
+    "format": "node skills/markdown-formatter/src/index.js --fix --all .",
+    "format:check": "node skills/markdown-formatter/src/index.js --check --all .",
+    "verify": "node skills/markdown-formatter/src/index.js --verify --all .",
+    "guard": "node skills/markdown-formatter/src/index.js --guard --all ."
   },
   "devDependencies": {
-    "oxfmt": "^0.51.0"
+    "oxfmt": "0.51.0"
   },
   "engines": {
     "node": ">=20"

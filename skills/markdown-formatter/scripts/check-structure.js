@@ -16,69 +16,86 @@
 "use strict";
 
 const { readFileSync, writeFileSync, existsSync } = require("fs");
-
-const mode = process.argv[2];
-const filePath = process.argv[3];
-
-if (!filePath) {
-  console.error("Usage: node check-structure.js [--snapshot|--check|--guard|--verify] <file>");
-  process.exit(1);
-}
+const { splitTableCells, isDelimiterLine } = require("./check-tables.js");
 
 const VALID_MODES = ["--snapshot", "--check", "--guard", "--verify"];
-if (!VALID_MODES.includes(mode)) {
-  console.error(`Invalid mode: ${mode}`);
-  process.exit(1);
-}
 
 function extractFences(content) {
   const fences = [];
-  const fenceRe = /^( {0,3})(`{3,}|~{3,})([^\n]*)\n([\s\S]*?)\n\1\2\n|^( {0,3})(`{3,}|~{3,})([^\n]*)\n([\s\S]*?)$/gm;
-  let match;
-  while ((match = fenceRe.exec(content)) !== null) {
-    if (match[1] !== undefined) {
-      fences.push({ opener: match[2], length: match[2].length, style: match[2][0], info: match[3] || "", closer: match[2] });
-    } else {
-      fences.push({ opener: match[6], length: match[6].length, style: match[6][0], info: match[7] || "", closer: null });
+  const lines = content.split("\n");
+  let current = null;
+
+  for (const line of lines) {
+    if (!current) {
+      const opener = line.match(/^( {0,3})(`{3,}|~{3,})([^\n]*)$/);
+      if (opener) {
+        current = {
+          indent: opener[1],
+          opener: opener[2],
+          length: opener[2].length,
+          style: opener[2][0],
+          info: opener[3] || "",
+        };
+      }
+      continue;
+    }
+
+    const closerPattern = new RegExp(`^${current.indent}${current.style}{${current.length},}\\s*$`);
+    if (closerPattern.test(line)) {
+      fences.push({
+        opener: current.opener,
+        length: current.length,
+        style: current.style,
+        info: current.info,
+        closer: current.opener,
+      });
+      current = null;
     }
   }
+
+  if (current) {
+    fences.push({
+      opener: current.opener,
+      length: current.length,
+      style: current.style,
+      info: current.info,
+      closer: null,
+    });
+  }
+
   return fences;
+}
+
+function parseTableRow(line) {
+  const cells = splitTableCells(line);
+  return { cells, colCount: cells.length };
+}
+
+function isPotentialTableRow(line) {
+  return splitTableCells(line).length > 1;
 }
 
 function extractTables(content) {
   const tables = [];
   const lines = content.split("\n");
-  const parseRow = (line) => {
-    const cells = line.split("|").filter((_, i, a) => i > 0 && i < a.length - 1);
-    return { cells, colCount: cells.length };
-  };
 
-  let i = 0;
-  while (i < lines.length) {
-    if (lines[i].trim().startsWith("|")) {
-      const header = parseRow(lines[i]);
-      i++;
-      if (i < lines.length && lines[i].trim().startsWith("|")) {
-        const delimiter = parseRow(lines[i]);
-        const hasDelimiterChar = lines[i].includes("-") || lines[i].includes(":");
-        if (delimiter.colCount > 0 && hasDelimiterChar) {
-          i++;
-          const rows = [];
-          while (i < lines.length && lines[i].trim().startsWith("|")) {
-            rows.push(parseRow(lines[i]));
-            i++;
-          }
-          tables.push({ header, delimiter, rows });
-        } else {
-          i++;
-        }
-      } else {
-        i++;
-      }
-    } else {
-      i++;
+  for (let i = 0; i < lines.length - 1; i++) {
+    if (!isPotentialTableRow(lines[i]) || !isDelimiterLine(lines[i + 1])) continue;
+
+    const header = parseTableRow(lines[i]);
+    const delimiter = parseTableRow(lines[i + 1]);
+    const rows = [];
+
+    let j = i + 2;
+    while (j < lines.length && isPotentialTableRow(lines[j]) && !isDelimiterLine(lines[j])) {
+      rows.push(parseTableRow(lines[j]));
+      j++;
     }
+
+    tables.push({ header, delimiter, rows });
+    i = j - 1;
   }
+
   return tables;
 }
 
@@ -104,8 +121,8 @@ function validateStructure(content) {
   const tables = extractTables(content);
   const errors = [];
   for (const fence of fences) {
-    if (!fence.closer) errors.push(`Unclosed fence: ${fence.style}${"`".repeat(fence.length)}`);
-    if (fence.info.includes(" ") && fence.info.trim() === "") errors.push(`Empty language tag on fence opener: ${fence.style}${"`".repeat(fence.length)} `);
+    if (!fence.closer) errors.push(`Unclosed fence: ${fence.opener}`);
+    if (fence.info.includes(" ") && fence.info.trim() === "") errors.push(`Empty language tag on fence opener: ${fence.opener} `);
   }
   for (const table of tables) {
     if (table.header.colCount !== table.delimiter.colCount) errors.push(`Table column mismatch: header ${table.header.colCount} vs delimiter ${table.delimiter.colCount}`);
@@ -153,7 +170,20 @@ function compareSnapshots(before, after) {
   return drift;
 }
 
-function main() {
+function main(argv = process.argv.slice(2)) {
+  const mode = argv[0];
+  const filePath = argv[1];
+
+  if (!filePath) {
+    console.error("Usage: node check-structure.js [--snapshot|--check|--guard|--verify] <file>");
+    process.exit(1);
+  }
+
+  if (!VALID_MODES.includes(mode)) {
+    console.error(`Invalid mode: ${mode}`);
+    process.exit(1);
+  }
+
   if (!existsSync(filePath)) { console.error(`Error: File not found: ${filePath}`); process.exit(1); }
   let content;
   try { content = readFileSync(filePath, "utf8"); } catch (err) { console.error(`Error reading file: ${err.message}`); process.exit(1); }
@@ -184,4 +214,18 @@ function main() {
   }
 }
 
-main();
+module.exports = {
+  extractFences,
+  extractTables,
+  buildSnapshot,
+  validateStructure,
+  getSnapshotPath,
+  loadSnapshot,
+  saveSnapshot,
+  compareSnapshots,
+  main,
+};
+
+if (require.main === module) {
+  main();
+}

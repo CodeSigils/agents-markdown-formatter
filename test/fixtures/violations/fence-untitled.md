@@ -6,9 +6,9 @@
 const x = 1;
 ```
 
-## Untitled fence (empty language tag) — violates policy
+## Untitled fence (leading whitespace before language tag) — violates policy
 
-```
+``` javascript
 const y = 2;
 ```
 
