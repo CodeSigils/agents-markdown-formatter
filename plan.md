@@ -328,6 +328,7 @@ Implement in a new repository at `/home/sand/projects/agents-markdown-formatter`
 - [x] Add a packaging/install verification task that builds or stages the exact install artifact into a temp directory and lists the files that would be shipped before release.
 - [x] Document the zero-dependency runtime contract: pure Node.js wrappers plus an externally resolved `oxfmt` binary; no bundled test dependencies, planning files, npm dev dependencies, lockfiles, `package.json`, or generated agent state in the installed skill.
 - [x] Document the developer-only dependency boundary separately so maintainers may use local test tooling without accidentally promoting those dependencies into the skill payload.
+- [x] Keep guard snapshots temporary: write-mode `--guard` must remove or restore `<file>.structure.json` sidecars after the post-format check, so users do not keep generated snapshot state beside formatted Markdown.
 - [x] Update `.gitignore` only for generated local state; do not use ignore rules as a substitute for an explicit release allowlist.
 - [x] ~~Create migration guide for existing users.~~ Intentionally skipped for v1: this fresh repo has no compatibility wrapper or legacy install path; historical migration context remains in `references/prior-art/`.
 

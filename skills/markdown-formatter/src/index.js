@@ -21,7 +21,7 @@
 "use strict";
 
 const { spawnSync } = require("child_process");
-const { readdirSync, statSync, existsSync, readFileSync, copyFileSync, mkdtempSync, rmSync } = require("fs");
+const { readdirSync, statSync, existsSync, readFileSync, writeFileSync, copyFileSync, mkdtempSync, rmSync } = require("fs");
 const { join, resolve, extname, basename } = require("path");
 const { tmpdir } = require("os");
 
@@ -181,9 +181,17 @@ function processFile(filePath, args) {
       if (!runOxfmt(["--check", filePath])) console.log(`Would format: ${filePath}`);
       return true;
     }
-    if (!runScript("check-structure.js", "--snapshot", filePath)) return false;
-    if (!runOxfmt(["--write", filePath])) return false;
-    return runScript("check-structure.js", "--check", filePath);
+    const snapshotPath = `${filePath}.structure.json`;
+    const hadSnapshot = existsSync(snapshotPath);
+    const previousSnapshot = hadSnapshot ? readFileSync(snapshotPath, "utf8") : null;
+    try {
+      if (!runScript("check-structure.js", "--snapshot", filePath)) return false;
+      if (!runOxfmt(["--write", filePath])) return false;
+      return runScript("check-structure.js", "--check", filePath);
+    } finally {
+      if (hadSnapshot) writeFileSync(snapshotPath, previousSnapshot);
+      else rmSync(snapshotPath, { force: true });
+    }
   }
 
   if (args.check) return runOxfmt(["--check", filePath]);

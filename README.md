@@ -34,7 +34,7 @@ Hermes is the first packaged skill target: `SKILL.md`, the install path, and shi
 | `--check`    | Check formatting without writing changes (exits 1 if unformatted) |
 | `--fix`      | Format files in-place (default behavior)                          |
 | `--all`      | Process directory inputs recursively; accepts multiple paths      |
-| `--guard`    | Enable structural guard (fence/table drift detection)             |
+| `--guard`    | Enable structural guard; temporary snapshots are cleaned up       |
 | `--verify`   | Check formatting, idempotence, and structural integrity read-only |
 | `--fences`   | Validate fence structure with `check-fences.js`                   |
 | `--validate` | Run structural, fence, and table validations                      |

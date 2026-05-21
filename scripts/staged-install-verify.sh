@@ -172,6 +172,13 @@ else
     exit 1
 fi
 
+if [[ -e "${GUARD_FIXTURE}.structure.json" ]]; then
+    echo "❌ FAILED: Staged --guard left a temporary structure snapshot"
+    exit 1
+else
+    echo "✓ Staged --guard cleaned temporary structure snapshot"
+fi
+
 echo ""
 echo "STAGED INSTALL VERIFICATION PASSED"
 echo "=================================="

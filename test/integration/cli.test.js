@@ -76,4 +76,38 @@ describe('markdown formatter CLI integration', () => {
       rmSync(dir, { recursive: true, force: true });
     }
   });
+
+  it('--fix --guard removes temporary structure snapshots after formatting', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'markdown-formatter-guard-fix-'));
+    const file = join(dir, 'dirty.md');
+    try {
+      writeFileSync(file, '# Dirty\n\n| A | B |\n|---|---|\n| 1 | 2 |\n');
+
+      const result = runCli(['--fix', '--guard', file]);
+
+      assert.equal(result.status, 0, result.stdout + result.stderr);
+      assert.equal(existsSync(`${file}.structure.json`), false);
+      assert.match(readFileSync(file, 'utf8'), /\| A   \| B   \|/);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it('--fix --guard preserves pre-existing structure snapshots', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'markdown-formatter-guard-existing-'));
+    const file = join(dir, 'dirty.md');
+    const snapshot = `${file}.structure.json`;
+    const originalSnapshot = '{"owner":"external"}\n';
+    try {
+      writeFileSync(file, '# Dirty\n\n| A | B |\n|---|---|\n| 1 | 2 |\n');
+      writeFileSync(snapshot, originalSnapshot);
+
+      const result = runCli(['--fix', '--guard', file]);
+
+      assert.equal(result.status, 0, result.stdout + result.stderr);
+      assert.equal(readFileSync(snapshot, 'utf8'), originalSnapshot);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
 });

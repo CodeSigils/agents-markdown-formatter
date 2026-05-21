@@ -39,7 +39,7 @@ From an installed payload, run the bundled `src/index.js` with Node from the ins
 - `--check`: Check if files are formatted correctly (read-only, exits with code 1 if unformatted)
 - `--fix`: Format files in-place (default behavior)
 - `--all`: Process directory inputs recursively; accepts multiple paths
-- `--guard`: Enable structural safety checks (fence count, table alignment)
+- `--guard`: Enable structural safety checks (fence count, table alignment); temporary snapshots are cleaned up
 - `--verify`: Run formatter and check structural integrity without writing changes
 - `--fences`: Validate fenced code block language info strings
 - `--validate`: Run structural, fence, and table validations
