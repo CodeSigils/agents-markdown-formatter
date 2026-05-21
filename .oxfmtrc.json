@@ -1,9 +1,9 @@
 {
   "tabWidth": 2,
-  "printWidth": 100,
+  "printWidth": 120,
   "endOfLine": "lf",
   "insertFinalNewline": true,
-  "proseWrap": "preserve",
+  "proseWrap": "always",
   "embeddedLanguageFormatting": "off",
   "ignorePatterns": [
     "node_modules/**",
