@@ -1,7 +1,7 @@
 # Hermes Agent Introduction
 
-Hermes is an open-source AI agent framework designed for developers who want
-flexibility and control over their AI-powered workflows.
+Hermes is an open-source AI agent framework designed for developers who want flexibility and control over their
+AI-powered workflows.
 
 ## Why Hermes?
 

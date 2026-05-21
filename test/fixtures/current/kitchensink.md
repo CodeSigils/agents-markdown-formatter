@@ -110,8 +110,7 @@ def fib(n):
 
 ## Blockquotes
 
-> This is a blockquote
-> Across multiple lines
+> This is a blockquote Across multiple lines
 >
 > With a blank line in between
 
