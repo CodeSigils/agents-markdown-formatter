@@ -56,6 +56,7 @@ const PLAN_EXPECTED_REPO_SHAPE = new Set([
   "AGENTS.md",
   "README.md",
   "plan.md",
+  "CHANGELOG.md",
   ".oxfmtrc.json",
   ".github/workflows/ci.yml",
   "package.json",
@@ -134,6 +135,7 @@ const ACTIVE_DRIFT_CHECK_PATTERNS = [
   "skills/markdown-formatter/scripts/check-tables.js",
   "README.md",
   "AGENTS.md",
+  "CHANGELOG.md",
 ];
 
 const KNOWN_OXFMT_KEYS = new Set([

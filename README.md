@@ -1,11 +1,24 @@
 # Agents Markdown Formatter
 
 [![v1.0.0](https://img.shields.io/badge/version-1.0.0-blue.svg)](skills/markdown-formatter/SKILL.md)
+[![CI](https://github.com/CodeSigils/agents-markdown-formatter/actions/workflows/ci.yml/badge.svg)](https://github.com/CodeSigils/agents-markdown-formatter/actions/workflows/ci.yml)
 
 Formatter-first GitHub-Flavored Markdown (GFM) and MDX skill for AI agents.
 
 This repository builds a Hermes-compatible Markdown formatter skill powered by Oxc's `oxfmt`. The CLI is plain Node.js
 and can also be used outside Hermes.
+
+## Why this exists
+
+AI agents write a lot of Markdown: READMEs, plans, runbooks, notes, review comments, and MDX documentation. That output
+often has the same failure modes: very long prose lines, inconsistent list and blockquote wrapping, fragile tables, and
+fenced code blocks that should not be reformatted as if they were production source files. Generic Markdown formatting
+tools can either leave too much drift in place or expand their blast radius into embedded examples.
+
+This repository cures that specific problem by making Markdown normalization deterministic while keeping structural
+safety explicit. It formats the Markdown container, bounds AI-generated prose to readable lines, treats embedded code as
+opaque payload, and uses repository-owned guards to detect table and fence drift before a formatter can silently damage
+document structure.
 
 ## What it does
 
@@ -27,6 +40,31 @@ Scope:
   strikethrough, and MDX files.
 - Out of scope: Obsidian wiki links, Mermaid validation, Pandoc dialects, semantic rewriting, and JSX syntax validation
   inside MDX.
+
+## Formatting philosophy
+
+The formatter intentionally normalizes Markdown prose while treating embedded code as opaque payload. The shipped Oxfmt
+config uses `printWidth: 120` and `proseWrap: "always"` so long agent-generated paragraphs become stable, bounded output
+instead of remaining as uncontrolled single-line prose.
+
+The same config sets `embeddedLanguageFormatting: "off"`. Fenced code blocks, examples, partial snippets, pseudocode,
+and MDX embedded regions are often intentionally incomplete or language-mixed. Reformatting them would turn this tool
+from a Markdown formatter into a multi-language formatter orchestrator, increasing failure modes and review noise.
+
+The intended workflow is to absorb normalization churn once, then keep future diffs small and predictable with
+`--check`, `--verify`, and CI.
+
+## Table safety policy
+
+Table safety is enforced by repository-owned structural guards, not by `.oxfmtrc.json`. Oxfmt performs the canonical
+Markdown formatting pass, while the local guard scripts verify that table and fence structure survived formatting:
+
+- `check-tables.js` validates GFM table column counts and pipe consistency.
+- `check-structure.js` snapshots fences and tables before formatting, then compares them afterward.
+- `--guard` restores the original file content if post-format structure changes.
+
+This keeps table handling conservative: validate strongly, avoid semantic rewriting, and do not pretend the formatter
+configuration can express table-safety semantics it does not control.
 
 ## CLI reference
 

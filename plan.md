@@ -8,7 +8,8 @@
 Maintain a formatter-first Hermes-compatible Markdown skill at `skills/markdown-formatter/`.
 
 The active implementation formats GitHub-Flavored Markdown (GFM) and MDX with Oxc's `oxfmt`, plus repository-owned
-structural checks for fences and tables. It replaces the historical `markdownlint-cli2` + custom table formatter
+structural checks for fences and tables. Its documentation positions the project as deterministic, rollback-safe
+Markdown normalization for AI-agent workflows. It replaces the historical `markdownlint-cli2` + custom table formatter
 pipeline preserved under `references/prior-art/`.
 
 ## Current scope
@@ -21,6 +22,8 @@ In scope for v1:
 - Structural checks for fence counts/styles/info strings and table column drift
 - Rollback-safe `--fix --guard` behavior when post-format structural drift is detected
 - Zero npm runtime dependencies in the shipped skill payload
+- Public documentation for the problem cured, formatting philosophy, and table safety policy
+- Repository changelog maintained outside the shipped runtime payload
 
 Out of scope for v1:
 
@@ -39,6 +42,7 @@ agents-markdown-formatter/
 ├── AGENTS.md
 ├── README.md
 ├── plan.md
+├── CHANGELOG.md
 ├── .oxfmtrc.json                    # repository/dev config copy
 ├── .github/workflows/ci.yml
 ├── package.json                     # dev-only dependencies and scripts
@@ -74,7 +78,8 @@ The installed user payload must contain only:
 - `skills/markdown-formatter/scripts/check-tables.js`
 
 Repository-only files must not ship: `plan.md`, `AGENTS.md`, `README.md`, `test/`, root `scripts/`, CI files,
-`package.json`, lockfiles, `node_modules/`, coverage, generated agent state, or local session/cache files.
+`package.json`, lockfiles, `node_modules/`, coverage, generated agent state, local session/cache files, or repository
+release notes.
 
 `bash scripts/staged-install-verify.sh` is the source of truth for staged payload verification.
 
@@ -106,7 +111,7 @@ Guard semantics:
 Run these before reporting shipping readiness:
 
 ```bash
-node skills/markdown-formatter/src/index.js --check README.md AGENTS.md plan.md skills/markdown-formatter/SKILL.md
+node skills/markdown-formatter/src/index.js --check README.md AGENTS.md CHANGELOG.md plan.md skills/markdown-formatter/SKILL.md
 npm test
 npm run test:unit
 npm run test:integration
@@ -133,6 +138,7 @@ Check at least these surfaces before completion:
 - `scripts/check-consistency.js`
 - `scripts/staged-install-verify.sh`
 - `.github/workflows/ci.yml`
+- `CHANGELOG.md`
 
 Stale or contradictory claims about guard write safety, shipped files, installed config, CLI flags, or validation
 commands are blocking.

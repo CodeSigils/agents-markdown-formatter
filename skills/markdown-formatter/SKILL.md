@@ -29,6 +29,13 @@ Runtime config: the CLI passes the bundled `.oxfmtrc.json` to `oxfmt` and disabl
 config wraps prose at 120 characters and sets `embeddedLanguageFormatting` to `"off"`, so code inside fenced blocks is
 left as-is.
 
+## Why this skill exists
+
+AI agents often produce Markdown with long prose lines, inconsistent wrapping, fragile tables, and fenced examples that
+should stay untouched. This skill normalizes the Markdown container while keeping structural safety explicit: prose is
+bounded for stable review, embedded code remains opaque, and table/fence drift is caught by guard scripts rather than
+left to formatter configuration alone.
+
 ## Usage
 
 From a source checkout:
