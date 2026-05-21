@@ -26,9 +26,13 @@ This skill formats **GitHub-Flavored Markdown (GFM)** and **MDX** (v1). Non-GFM 
 
 ## Usage
 
+From a source checkout:
+
 ```bash
 node skills/markdown-formatter/src/index.js [options] <path...>
 ```
+
+From an installed payload, run the bundled `src/index.js` with Node from the installed skill directory.
 
 ### Options
 
@@ -67,14 +71,14 @@ Agents should run the markdown formatter after creating or editing any Markdown 
 ## Severity Levels
 
 - **Blocking violations**: Structural issues detected by `--guard` (mismatched fence counts, broken tables) will cause the formatter to exit with error code 1 and prevent file writes
-- **Informational suggestions**: Pure formatting inconsistencies (whitespace, trailing spaces, list indentation) are reported but do not block execution when using `--fix`
+- **Formatting differences**: Corrected by `--fix`; reported with a non-zero exit by `--check` or `--verify`
 
 ## Examples
 
 Check formatting without changes:
 
 ```bash
-node skills/markdown-formatter/src/index.js --check --all docs/
+node skills/markdown-formatter/src/index.js --verify --all docs/
 ```
 
 Format files with structural guards:
@@ -98,5 +102,5 @@ node skills/markdown-formatter/src/index.js --validate --all docs/ notes/
 ## References
 
 - Oxfmt documentation: https://oxc.rs/docs/guide/usage/formatter.md
-- Spike findings: See the repository planning and fixture documentation for implementation research
-- Agent coordination: Refer to `AGENTS.md` for markdown validation policy
+- Source repository and maintenance docs: https://github.com/CodeSigils/agents-markdown-formatter
+- Repository-only agent policy lives in `AGENTS.md` in the source repository and is not part of the installed runtime payload

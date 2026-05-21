@@ -19,11 +19,13 @@ Unlike lint-focused tools, this skill focuses on _formatting_ with safety guaran
 
 ## CLI Reference
 
-The formatter CLI is accessed via:
+The formatter CLI is agent-agnostic JavaScript. From a source checkout, access it via:
 
 ```bash
 node skills/markdown-formatter/src/index.js [options] <path...>
 ```
+
+Hermes is the first packaged skill target: `SKILL.md`, the install path, and shipped metadata are Hermes-compatible. The CLI itself does not require Hermes at runtime.
 
 ### Available Flags
 
@@ -123,6 +125,6 @@ The skill follows a strict runtime allowlist:
 Agent behavior and constraints are defined in:
 
 - [`AGENTS.md`](AGENTS.md) — Repository governance and agent workflow policies
-- [`skills/markdown-formatter/SKILL.md`](skills/markdown-formatter/SKILL.md) — Hermes-specific skill definition (shipped)
+- [`skills/markdown-formatter/SKILL.md`](skills/markdown-formatter/SKILL.md) — Hermes-compatible packaged skill definition (shipped)
 
 Agents working on this repository must consult `AGENTS.md` before implementation work and follow the formatter-first identity guidelines.

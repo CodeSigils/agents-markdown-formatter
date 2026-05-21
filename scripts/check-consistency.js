@@ -70,8 +70,8 @@ const PLAN_EXPECTED_REPO_SHAPE = new Set([
   "test/",
 ]);
 
-// Artifacts plan.md describes but were NOT created (and are intentionally skipped).
-const PLAN_STALE_ARTIFACTS = new Set([
+// Historical lint-era artifacts that must not reappear in active implementation docs.
+const HISTORICAL_LINT_ARTIFACTS = new Set([
   "lint.js",
   "mdformat.js",
   "post-write.js",
@@ -257,9 +257,9 @@ for (const expected of PLAN_EXPECTED_REPO_SHAPE) {
   }
 }
 
-for (const stale of PLAN_STALE_ARTIFACTS) {
+for (const stale of HISTORICAL_LINT_ARTIFACTS) {
   if (existsSync(join(ROOT, stale))) {
-    errors.push(`plan drift: stale artifact "${stale}" exists but should not`);
+    errors.push(`historical lint artifact "${stale}" exists but should not`);
   }
 }
 
