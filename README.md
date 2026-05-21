@@ -91,6 +91,39 @@ CLI itself does not require Hermes at runtime.
 | `--dry-run`  | Show what would be changed without writing files                           |
 | `--help`     | Display help message                                                       |
 
+## Install instructions
+
+For Hermes Agent users:
+
+```bash
+hermes skills install CodeSigils/agents-markdown-formatter/markdown-formatter --yes
+```
+
+If Hermes blocks installation because the community-source security scanner flags the runtime wrapper for manual review,
+inspect the warnings and install with `--force` only if they match the reviewed source:
+
+```bash
+hermes skills inspect CodeSigils/agents-markdown-formatter/markdown-formatter
+hermes skills install CodeSigils/agents-markdown-formatter/markdown-formatter --yes --force
+```
+
+The installed skill payload contains only these files on the user's disk:
+
+```text
+~/.hermes/skills/markdown-formatter/
+├── SKILL.md                    # Hermes skill definition, metadata, usage, scope, and examples
+├── .oxfmtrc.json               # Runtime Oxfmt config used by src/index.js
+├── src/
+│   └── index.js                # Canonical formatter CLI and Oxfmt orchestration entrypoint
+└── scripts/
+    ├── check-structure.js      # Structural snapshot, validation, and pre/post drift comparison
+    ├── check-fences.js         # Fenced code block validator for info strings and closure rules
+    └── check-tables.js         # GFM table column-count validator
+```
+
+Repository-only files (`plan.md`, `AGENTS.md`, `README.md`, `test/`, `package.json`, etc.) are excluded from the shipped
+payload.
+
 ## Prerequisites
 
 The formatter requires Node.js >=20 and an `oxfmt` binary available in one of these locations:
@@ -124,39 +157,6 @@ Reference fixtures and test organization:
 - `test/fixtures/violations/` — Structural violations the guard must detect
 - `test/unit/` — Isolated component tests for structure, fences, tables, and CLI helpers
 - `test/integration/` — CLI and pipeline end-to-end tests
-
-## Install instructions
-
-For Hermes Agent users:
-
-```bash
-hermes skills install CodeSigils/agents-markdown-formatter/markdown-formatter --yes
-```
-
-If Hermes blocks installation because the community-source security scanner flags the runtime wrapper for manual review,
-inspect the warnings and install with `--force` only if they match the reviewed source:
-
-```bash
-hermes skills inspect CodeSigils/agents-markdown-formatter/markdown-formatter
-hermes skills install CodeSigils/agents-markdown-formatter/markdown-formatter --yes --force
-```
-
-The installed skill payload contains only these files on the user's disk:
-
-```text
-~/.hermes/skills/markdown-formatter/
-├── SKILL.md                    # Hermes skill definition, metadata, usage, scope, and examples
-├── .oxfmtrc.json               # Runtime Oxfmt config used by src/index.js
-├── src/
-│   └── index.js                # Canonical formatter CLI and Oxfmt orchestration entrypoint
-└── scripts/
-    ├── check-structure.js      # Structural snapshot, validation, and pre/post drift comparison
-    ├── check-fences.js         # Fenced code block validator for info strings and closure rules
-    └── check-tables.js         # GFM table column-count validator
-```
-
-Repository-only files (`plan.md`, `AGENTS.md`, `README.md`, `test/`, `package.json`, etc.) are excluded from the shipped
-payload.
 
 ## Shipping and allowlist
 
