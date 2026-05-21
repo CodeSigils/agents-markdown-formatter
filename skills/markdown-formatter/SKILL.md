@@ -49,9 +49,9 @@ From an installed payload, run the bundled `src/index.js` with Node from the ins
 ## Prerequisites
 
 - `node` (>=20)
-- `oxfmt` (either in project's `node_modules/.bin/` or available in PATH)
+- `oxfmt` (project-local binary or available in PATH)
 
-The formatter first checks project-local `node_modules/.bin/oxfmt`, then falls back to `oxfmt` in PATH. For installed Hermes use, make `oxfmt` available on PATH; one option is `npm install -g oxfmt`. If no binary is found, the tool exits without substituting another Markdown formatter.
+The formatter first checks the current project's dependency binary directory, then falls back to `oxfmt` in PATH. For installed Hermes use, make `oxfmt` available on PATH; one option is `npm install -g oxfmt`. If no binary is found, the tool exits without substituting another Markdown formatter.
 
 ## Supported File Types
 
