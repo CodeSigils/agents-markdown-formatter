@@ -94,14 +94,19 @@ hermes skills inspect CodeSigils/agents-markdown-formatter/markdown-formatter
 hermes skills install CodeSigils/agents-markdown-formatter/markdown-formatter --yes --force
 ```
 
-The installed skill payload contains only:
+The installed skill payload contains only these files on the user's disk:
 
-- `SKILL.md` — Skill definition with Hermes-compatible frontmatter
-- `.oxfmtrc.json` — Runtime Oxfmt config used by the CLI
-- `src/index.js` — Canonical formatter CLI
-- `scripts/check-structure.js` — Structural snapshot and drift guard
-- `scripts/check-fences.js` — Fence validator
-- `scripts/check-tables.js` — Table column validator
+```text
+~/.hermes/skills/markdown-formatter/
+├── SKILL.md                    # Hermes skill definition, metadata, usage, scope, and examples
+├── .oxfmtrc.json               # Runtime Oxfmt config used by src/index.js
+├── src/
+│   └── index.js                # Canonical formatter CLI and Oxfmt orchestration entrypoint
+└── scripts/
+    ├── check-structure.js      # Structural snapshot, validation, and pre/post drift comparison
+    ├── check-fences.js         # Fenced code block validator for info strings and closure rules
+    └── check-tables.js         # GFM table column-count validator
+```
 
 Repository-only files (`plan.md`, `AGENTS.md`, `README.md`, `test/`, `package.json`, etc.) are excluded from the shipped payload.
 
