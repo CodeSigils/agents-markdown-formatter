@@ -8,6 +8,14 @@
   through check-mode workflows.
 - Document table safety as repository-owned structural guard behavior rather than `.oxfmtrc.json` configuration.
 - Add a CI status badge to the README.
+- Rework the README opening for discoverability with a quick start and comparison against adjacent Markdown tools.
+- Sharpen package metadata with agent-safe Markdown formatter keywords.
+- Update packaged skill description and tags for Hermes-side discovery.
+- Update GitHub repository description and topics for search discovery.
+- Run CI on Node 24 while keeping the documented runtime requirement at Node.js >=20.
+- Clarify anti-drift checks so runtime Node compatibility and CI validation runtime are tracked separately.
+- Document release posture after `v1.0.0`: current post-tag changes are maintenance-only and do not alter the shipped
+  runtime payload.
 
 ## v1.0.0
 

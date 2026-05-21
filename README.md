@@ -3,10 +3,31 @@
 [![v1.0.0](https://img.shields.io/badge/version-1.0.0-blue.svg)](skills/markdown-formatter/SKILL.md)
 [![CI](https://github.com/CodeSigils/agents-markdown-formatter/actions/workflows/ci.yml/badge.svg)](https://github.com/CodeSigils/agents-markdown-formatter/actions/workflows/ci.yml)
 
-Formatter-first GitHub-Flavored Markdown (GFM) and MDX skill for AI agents.
+Deterministic Markdown formatting for AI-agent-authored docs.
 
-This repository builds a Hermes-compatible Markdown formatter skill powered by Oxc's `oxfmt`. The CLI is plain Node.js
-and can also be used outside Hermes.
+This repository builds a Hermes-compatible GitHub-Flavored Markdown (GFM) and MDX formatter skill powered by Oxc's
+`oxfmt`. It formats the Markdown container, keeps fenced code untouched, and adds structural guards so tables and fences
+do not silently drift. The CLI is plain Node.js and can also be used outside Hermes.
+
+## Quick start
+
+Install for Hermes Agent:
+
+```bash
+hermes skills install CodeSigils/agents-markdown-formatter/markdown-formatter --yes
+```
+
+Format one file safely from an installed skill:
+
+```bash
+node ~/.hermes/skills/markdown-formatter/src/index.js --fix --guard README.md
+```
+
+Verify a docs directory without writing changes:
+
+```bash
+node ~/.hermes/skills/markdown-formatter/src/index.js --verify --all docs/
+```
 
 ## Why this exists
 
@@ -19,6 +40,15 @@ This repository cures that specific problem by making Markdown normalization det
 safety explicit. It formats the Markdown container, bounds AI-generated prose to readable lines, treats embedded code as
 opaque payload, and uses repository-owned guards to detect table and fence drift before a formatter can silently damage
 document structure.
+
+## Why not just use another Markdown tool?
+
+| Tool/use case  | Fit                                                                                 |
+| :------------- | :---------------------------------------------------------------------------------- |
+| Prettier       | Great general formatter; broader embedded-language behavior than this repo needs    |
+| markdownlint   | Great style checker; not formatter-first and does not run this repository's guards  |
+| `oxfmt` direct | Fast canonical formatter; no repository-specific rollback or structural guard layer |
+| This repo      | Agent-safe GFM/MDX formatting with opaque fenced code and rollback-safe guards      |
 
 ## What it does
 
@@ -166,6 +196,31 @@ The skill follows a strict runtime allowlist:
 - Excluded: planning docs, tests, fixtures, development tooling, and governance files
 - Verification: `bash scripts/staged-install-verify.sh` stages and tests the exact runtime payload
 - Dependency boundary: root `package.json` and `package-lock.json` are repository-only
+
+## Release posture
+
+`v1.0.0` is the current runtime release. `main` may contain maintenance commits after that tag for CI, checks, or
+repository documentation, but those changes should not be treated as a runtime release unless files under
+`skills/markdown-formatter/` change and the staged payload is verified again.
+
+Recommended release practice:
+
+1. Do not force-move a published tag.
+2. Keep runtime changes and repository-only maintenance clearly separated.
+3. Before tagging a runtime release, verify the exact commit with:
+
+   ```bash
+   node scripts/check-consistency.js
+   npm test
+   npm run test:unit
+   npm run test:integration
+   bash scripts/staged-install-verify.sh
+   npm run format:check
+   ```
+
+4. Confirm GitHub Actions is green on the commit being tagged.
+5. Avoid expanding scope during release cleanup; use follow-up issues for new Markdown dialects, embedded-code
+   formatting, or broader configuration systems.
 
 ## Agent contract
 

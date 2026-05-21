@@ -1,15 +1,20 @@
 ---
 name: markdown-formatter
-description: "Format Markdown to GFM standard using oxfmt + structural guardrails"
+description: "AI-agent-safe GFM and MDX Markdown formatter powered by oxfmt with structural guards"
 version: "1.0.0"
 author: "CodeSigils"
 license: "MIT"
 compatibility: "hermes"
 metadata.hermes.tags:
-  - formatter
   - markdown
-  - oxfmt
+  - formatter
   - gfm
+  - mdx
+  - oxfmt
+  - oxc
+  - ai-agents
+  - documentation
+  - guardrails
 ---
 
 ## Scope

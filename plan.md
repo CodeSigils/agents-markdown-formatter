@@ -122,6 +122,21 @@ node scripts/check-consistency.js
 Do not validate repository Markdown with unrelated external Markdown formatters or linters. This repository exists to
 validate the Oxc/Oxfmt path.
 
+## Release posture
+
+`v1.0.0` is the current runtime release tag. Repository-only maintenance commits after that tag, such as CI runtime
+updates or anti-drift checker cleanup, do not automatically imply a new runtime release when the shipped files under
+`skills/markdown-formatter/` are unchanged.
+
+Release rules:
+
+- Do not force-move a published tag.
+- Keep runtime payload changes separate from repository-only CI, test, checker, or documentation maintenance.
+- Before tagging a runtime release, verify the exact commit with the development validation commands above, staged
+  install verification, clean git status, and green GitHub Actions.
+- Avoid adding new feature scope during release cleanup; capture new dialects, embedded-code formatting, or broad config
+  systems as follow-up work instead.
+
 ## Anti-drift rules
 
 Update every affected source of truth in the same change whenever behavior, commands, file paths, skill identity, Oxfmt

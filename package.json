@@ -1,7 +1,7 @@
 {
   "name": "agents-markdown-formatter",
   "version": "1.0.0",
-  "description": "Formatter-first GFM+MDX skill for AI agents powered by Oxc oxfmt",
+  "description": "AI-agent-safe GFM and MDX Markdown formatter powered by Oxc oxfmt with structural guards",
   "private": true,
   "scripts": {
     "test": "node scripts/check-all.js",
