@@ -1,6 +1,6 @@
 # Agents Markdown Formatter
 
-[![v1.0.0](https://img.shields.io/badge/version-1.0.0-blue.svg)](skills/markdown-formatter/SKILL.md)
+[![v1.0.2](https://img.shields.io/badge/version-1.0.2-blue.svg)](skills/markdown-formatter/SKILL.md)
 [![CI](https://github.com/CodeSigils/agents-markdown-formatter/actions/workflows/ci.yml/badge.svg)](https://github.com/CodeSigils/agents-markdown-formatter/actions/workflows/ci.yml)
 
 Deterministic Markdown formatting for AI-agent-authored docs.
@@ -216,7 +216,7 @@ The skill follows a strict runtime allowlist:
 
 ## Release posture
 
-`v1.0.0` is the current runtime release. `main` may contain maintenance commits after that tag for CI, checks, or
+`v1.0.2` is the current runtime release. `main` may contain maintenance commits after that tag for CI, checks, or
 repository documentation, but those changes should not be treated as a runtime release unless files under
 `skills/markdown-formatter/` change and the staged payload is verified again.
 

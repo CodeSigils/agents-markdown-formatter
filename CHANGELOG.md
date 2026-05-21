@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- No changes yet.
+
+## v1.0.2
+
 - Add README explanation for the problem this repository cures: unstable AI-authored Markdown, uncontrolled prose
   wrapping, fragile tables, and embedded code that should remain untouched.
 - Document the formatting philosophy: normalize Markdown prose, keep embedded content opaque, and enforce consistency
@@ -18,10 +22,14 @@
 - Document that routine CI LTS bumps update only `.node-version`; installed runtime-minimum changes remain deliberate
   compatibility changes.
 - Add read-only `--doctor` diagnostics for Node.js, Oxfmt, bundled config, and runtime payload readiness.
-- Clarify that `--doctor` is an unreleased runtime payload change after `v1.0.0`; a new runtime release decision is
-  required before claiming published installs include it.
+- Correct release badge and packaged skill version metadata after the superseded `v1.0.1` tag was cut with stale
+  `v1.0.0` version metadata.
 - Document release posture after `v1.0.0`: repository-only changes do not alter the shipped runtime payload, while
   runtime payload changes require a new release decision before published-readiness claims.
+
+## v1.0.1
+
+- Superseded by `v1.0.2`; this tag included the `--doctor` runtime changes but retained stale `v1.0.0` release metadata.
 
 ## v1.0.0
 
