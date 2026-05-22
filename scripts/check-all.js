@@ -53,7 +53,7 @@ function collectFiles(targets) {
 
 function runCheck(check, file) {
   const scriptPath = join(SKILL_DIR, 'scripts', `${check.name}.js`);
-  const result = spawnSync('node', [scriptPath, ...check.args, file], { encoding: 'utf8' });
+  const result = spawnSync(process.execPath, [scriptPath, ...check.args, file], { encoding: 'utf8' });
   return {
     ok: result.status === 0,
     stdout: result.stdout || '',

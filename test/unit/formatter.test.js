@@ -7,6 +7,8 @@ const {
   NODE_RUNTIME_MIN_VERSION,
   parseArgs,
   runDoctor,
+  getOxfmtPathCandidates,
+  getSpawnOptions,
   resolveInputFiles,
 } = require('../../skills/markdown-formatter/src/index.js');
 
@@ -53,6 +55,18 @@ describe('formatter CLI helper unit tests', () => {
     assert.match(output, /Config: .*\.oxfmtrc\.json \(ok\)/);
     assert.match(output, /Payload: .*SKILL\.md \(ok\)/);
     assert.match(output, /Ready: yes/);
+  });
+
+  it('builds child-process options without shell execution', () => {
+    assert.deepStrictEqual(getSpawnOptions({ timeout: 5000 }), { encoding: 'utf8', timeout: 5000 });
+  });
+
+  it('prefers Windows oxfmt shims without requiring shell execution', () => {
+    const candidates = getOxfmtPathCandidates({ cwd: 'C:\\repo', skillDir: 'C:\\skill', platform: 'win32' });
+
+    assert(candidates.includes(join('C:\\repo', 'node_modules', '.bin', 'oxfmt.cmd')));
+    assert(candidates.includes(join('C:\\skill', 'node_modules', '.bin', 'oxfmt.cmd')));
+    assert(candidates.every((candidate) => !candidate.includes('undefined')));
   });
 
   it('reports missing oxfmt from --doctor without exiting the process', () => {

@@ -166,8 +166,8 @@ payload.
 
 The formatter requires Node.js >=20 and an `oxfmt` binary available in one of these locations:
 
-1. Local development: `node_modules/.bin/oxfmt` after `npm ci`
-2. System PATH: `oxfmt` available globally in the shell
+1. Local development: `node_modules/.bin/oxfmt` after `npm ci` (`oxfmt.cmd`/`oxfmt.exe` are also checked on Windows)
+2. System PATH: `oxfmt` available as an executable on PATH
 
 For an installed Hermes skill, put `oxfmt` on PATH:
 

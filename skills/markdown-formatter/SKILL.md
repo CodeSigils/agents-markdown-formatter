@@ -70,8 +70,9 @@ From an installed payload, run the bundled `src/index.js` with Node from the ins
 - `node` (>=20)
 - `oxfmt` (project-local binary or available in PATH)
 
-The formatter checks for `oxfmt` in the active project and then in PATH. For installed Hermes use, make `oxfmt`
-available on PATH. If no binary is found, the tool exits without substituting another Markdown formatter.
+The formatter checks for `oxfmt` in the active project and then in PATH, including `oxfmt.cmd`/`oxfmt.exe` shims on
+Windows. For installed Hermes use, make `oxfmt` available on PATH. If no binary is found, the tool exits without
+substituting another Markdown formatter.
 
 Run `--doctor` to check runtime readiness without modifying files. It exits 0 when Node.js, `oxfmt`, bundled config, and
 required runtime payload files are ready, and exits 1 with actionable guidance when a required runtime piece is missing.

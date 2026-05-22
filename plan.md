@@ -87,7 +87,7 @@ release notes.
 
 ## Formatter and guard behavior
 
-The CLI resolves `oxfmt` in this order:
+The CLI resolves `oxfmt` in this order (using `oxfmt.cmd`/`oxfmt.exe` variants for local and PATH shims on Windows):
 
 1. `./node_modules/.bin/oxfmt` from the caller's current working directory
 2. `./node_modules/oxfmt/bin/oxfmt` from the caller's current working directory

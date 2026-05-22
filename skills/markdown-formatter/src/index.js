@@ -77,17 +77,35 @@ Prerequisites: oxfmt on PATH or in node_modules/.bin/
 `);
 }
 
-function resolveOxfmtBin() {
-  const paths = [
-    join(process.cwd(), "node_modules", ".bin", "oxfmt"),
-    join(process.cwd(), "node_modules", "oxfmt", "bin", "oxfmt"),
-    join(SKILL_DIR, "node_modules", ".bin", "oxfmt"),
-    join(SKILL_DIR, "node_modules", "oxfmt", "bin", "oxfmt"),
-  ];
-  for (const p of paths) { if (existsSync(p)) return p; }
+function getSpawnOptions(options = {}) {
+  return { encoding: "utf8", ...options };
+}
 
-  try { if (spawnSync("oxfmt", ["--version"], { encoding: "utf8", timeout: 5000 }).status === 0) return "oxfmt"; }
-  catch { /* not on PATH */ }
+function getOxfmtExecutableNames(platform = process.platform) {
+  return platform === "win32" ? ["oxfmt.cmd", "oxfmt.exe", "oxfmt"] : ["oxfmt"];
+}
+
+function getOxfmtPathCandidates(options = {}) {
+  const cwd = options.cwd || process.cwd();
+  const skillDir = options.skillDir || SKILL_DIR;
+  const platform = options.platform || process.platform;
+  const shimNames = getOxfmtExecutableNames(platform);
+
+  return [
+    ...shimNames.map((name) => join(cwd, "node_modules", ".bin", name)),
+    join(cwd, "node_modules", "oxfmt", "bin", "oxfmt"),
+    ...shimNames.map((name) => join(skillDir, "node_modules", ".bin", name)),
+    join(skillDir, "node_modules", "oxfmt", "bin", "oxfmt"),
+  ];
+}
+
+function resolveOxfmtBin() {
+  for (const p of getOxfmtPathCandidates()) { if (existsSync(p)) return p; }
+
+  for (const name of getOxfmtExecutableNames()) {
+    try { if (spawnSync(name, ["--version"], getSpawnOptions({ timeout: 5000 })).status === 0) return name; }
+    catch { /* not on PATH */ }
+  }
 
   return null;
 }
@@ -111,7 +129,7 @@ function runDoctor(options = {}) {
   const exists = options.exists || existsSync;
   const nodeVersion = options.nodeVersion || process.version;
   const resolveOxfmt = options.resolveOxfmt || resolveOxfmtBin;
-  const runVersion = options.runVersion || ((bin) => spawnSync(bin, ["--version"], { encoding: "utf8", timeout: 5000, shell: process.platform === "win32" }));
+  const runVersion = options.runVersion || ((bin) => spawnSync(bin, ["--version"], getSpawnOptions({ timeout: 5000 })));
 
   const requiredFiles = [
     join(SKILL_DIR, "SKILL.md"),
@@ -159,7 +177,7 @@ function runDoctor(options = {}) {
 
 function runOxfmt(oxfmtArgs) {
   const configArgs = existsSync(OXFMT_CONFIG) ? ["--config", OXFMT_CONFIG, "--disable-nested-config"] : [];
-  const result = spawnSync(getOxfmtBin(), [...configArgs, ...oxfmtArgs], { encoding: "utf8", shell: process.platform === "win32" });
+  const result = spawnSync(getOxfmtBin(), [...configArgs, ...oxfmtArgs], getSpawnOptions());
   if (result.stdout) process.stdout.write(result.stdout);
   if (result.stderr) process.stderr.write(result.stderr);
   return result.status === 0;
@@ -168,7 +186,7 @@ function runOxfmt(oxfmtArgs) {
 function runScript(script, ...scriptArgs) {
   const scriptPath = join(SKILL_DIR, "scripts", script);
   if (!existsSync(scriptPath)) { console.error(`Error: ${script} not found`); return false; }
-  const result = spawnSync("node", [scriptPath, ...scriptArgs], { encoding: "utf8" });
+  const result = spawnSync(process.execPath, [scriptPath, ...scriptArgs], getSpawnOptions());
   if (result.stdout) process.stdout.write(result.stdout);
   if (result.stderr) process.stderr.write(result.stderr);
   return result.status === 0;
@@ -312,6 +330,8 @@ if (require.main === module) {
 module.exports = {
   NODE_RUNTIME_MIN_VERSION,
   parseArgs,
+  getOxfmtPathCandidates,
+  getSpawnOptions,
   resolveOxfmtBin,
   runDoctor,
   findMarkdownFiles,
