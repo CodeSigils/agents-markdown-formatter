@@ -115,6 +115,13 @@ Fence policy is intentionally structural, not style-only:
 This keeps handling conservative: validate strongly, avoid semantic rewriting, and do not pretend the formatter
 configuration can express table- or fence-safety semantics it does not control.
 
+## Architecture: formatter as a commodity
+
+The guard scripts (`--verify`, `--guard`, `--check`, `--doctor`) are formatter-agnostic. The formatter (oxfmt) is a
+swappable component wrapped by the guard layer. If oxfmt became unmaintained, swapping it for Prettier's Markdown
+formatter is a `package.json` line change — the guard layer, structural checks, idempotence verification, and rollback
+logic keep working unchanged.
+
 ## CLI reference
 
 From a source checkout:

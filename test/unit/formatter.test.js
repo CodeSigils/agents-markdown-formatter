@@ -5,8 +5,10 @@ const { join } = require('node:path');
 const { tmpdir } = require('node:os');
 const {
   NODE_RUNTIME_MIN_VERSION,
+  OXFMT_MAX_VERSION,
   parseArgs,
   runDoctor,
+  isSupportedOxfmtVersion,
   getOxfmtPathCandidates,
   getSpawnOptions,
   resolveInputFiles,
@@ -19,7 +21,7 @@ describe('formatter CLI helper unit tests', () => {
       log: (line) => output.push(line),
       nodeVersion: `v${NODE_RUNTIME_MIN_VERSION}.0.0`,
       resolveOxfmt: () => '/tmp/oxfmt',
-      runVersion: () => ({ status: 0, stdout: 'oxfmt 0.51.0\n', stderr: '' }),
+      runVersion: () => ({ status: 0, stdout: 'oxfmt 0.54.0\n', stderr: '' }),
       exists: () => true,
       ...options,
     });
@@ -51,7 +53,7 @@ describe('formatter CLI helper unit tests', () => {
 
     assert.equal(result, true);
     assert.match(output, new RegExp(`Node\\.js: v${NODE_RUNTIME_MIN_VERSION}\\.0\\.0 \\(ok\\)`));
-    assert.match(output, /oxfmt: \/tmp\/oxfmt \(oxfmt 0\.51\.0\)/);
+    assert.match(output, /oxfmt: \/tmp\/oxfmt \(oxfmt 0\.54\.0\)/);
     assert.match(output, /Config: .*\.oxfmtrc\.json \(ok\)/);
     assert.match(output, /Payload: .*SKILL\.md \(ok\)/);
     assert.match(output, /Ready: yes/);
@@ -101,6 +103,24 @@ describe('formatter CLI helper unit tests', () => {
     assert.equal(result, false);
     assert.match(output, /oxfmt: \/tmp\/oxfmt \(permission denied\) \(version check failed\)/);
     assert.match(output, /Ready: no/);
+  });
+
+  it('warns when oxfmt version exceeds tested maximum from --doctor checks', () => {
+    const { result, output } = collectDoctor({
+      runVersion: () => ({ status: 0, stdout: 'oxfmt 0.55.0\n', stderr: '' }),
+    });
+
+    assert.equal(result, true);
+    assert.match(output, new RegExp(`Version 0.55.0 exceeds tested maximum ${OXFMT_MAX_VERSION}`));
+    assert.match(output, /Ready: yes/);
+  });
+
+  it('isSupportedOxfmtVersion extracts semver from version strings', () => {
+    assert.deepStrictEqual(isSupportedOxfmtVersion('oxfmt 0.54.0\n'), { version: '0.54.0', supported: true });
+    assert.deepStrictEqual(isSupportedOxfmtVersion('Version: 0.54.0\n'), { version: '0.54.0', supported: true });
+    assert.deepStrictEqual(isSupportedOxfmtVersion('oxfmt 0.53.0\n'), { version: '0.53.0', supported: true });
+    assert.deepStrictEqual(isSupportedOxfmtVersion('oxfmt 0.55.0\n'), { version: '0.55.0', supported: false });
+    assert.equal(isSupportedOxfmtVersion('not a version'), null);
   });
 
   it('reports missing config and payload files from --doctor checks', () => {

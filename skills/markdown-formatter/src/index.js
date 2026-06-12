@@ -29,6 +29,7 @@ const { tmpdir } = require("os");
 const SKILL_DIR = resolve(__dirname, "..");
 const OXFMT_CONFIG = join(SKILL_DIR, ".oxfmtrc.json");
 const NODE_RUNTIME_MIN_VERSION = 20;
+const OXFMT_MAX_VERSION = "0.54.0";
 const LONG_FLAGS = new Set(["check", "fix", "all", "guard", "verify", "fences", "validate", "doctor", "dry-run", "help"]);
 const SHORT_FLAGS = { h: "help", n: "dry-run" };
 const MARKDOWN_EXTENSIONS = new Set([".md", ".markdown", ".mdx"]);
@@ -124,6 +125,26 @@ function isSupportedNodeVersion(version) {
   return Number.isInteger(major) && major >= NODE_RUNTIME_MIN_VERSION;
 }
 
+function semverCompare(a, b) {
+  const pa = a.split(".").map(Number);
+  const pb = b.split(".").map(Number);
+  for (let i = 0; i < 3; i++) {
+    if (pa[i] > pb[i]) return 1;
+    if (pa[i] < pb[i]) return -1;
+  }
+  return 0;
+}
+
+function isSupportedOxfmtVersion(versionText) {
+  const match = String(versionText).match(/(\d+)\.(\d+)\.(\d+)/);
+  if (!match) return null;
+  const detected = `${match[1]}.${match[2]}.${match[3]}`;
+  return {
+    version: detected,
+    supported: semverCompare(detected, OXFMT_MAX_VERSION) <= 0,
+  };
+}
+
 function runDoctor(options = {}) {
   const log = options.log || ((line) => console.log(line));
   const exists = options.exists || existsSync;
@@ -155,6 +176,12 @@ function runDoctor(options = {}) {
     const versionOk = version.status === 0;
     ok = ok && versionOk;
     log(`oxfmt: ${oxfmt}${versionText ? ` (${versionText})` : ""}${versionOk ? "" : " (version check failed)"}`);
+    if (versionText && version.status === 0) {
+      const vi = isSupportedOxfmtVersion(versionText);
+      if (vi && !vi.supported) {
+        log(`  \u26a0 Version ${vi.version} exceeds tested maximum ${OXFMT_MAX_VERSION}. Verify compatibility before relying on newer behavior.`);
+      }
+    }
   } else {
     ok = false;
     log("oxfmt: missing");
@@ -329,11 +356,13 @@ if (require.main === module) {
 
 module.exports = {
   NODE_RUNTIME_MIN_VERSION,
+  OXFMT_MAX_VERSION,
   parseArgs,
   getOxfmtPathCandidates,
   getSpawnOptions,
   resolveOxfmtBin,
   runDoctor,
+  isSupportedOxfmtVersion,
   findMarkdownFiles,
   resolveInputFiles,
   processFile,
