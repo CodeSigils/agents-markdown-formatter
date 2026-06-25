@@ -255,7 +255,16 @@ Recommended release practice:
    ```
 
 4. Confirm GitHub Actions is green on the commit being tagged.
-5. Avoid expanding scope during release cleanup; use follow-up issues for new Markdown dialects, embedded-code
+5. Create the release from the annotated tag:
+
+   ```bash
+   gh release create vX.Y.Z --title "vX.Y.Z" --notes "$(git tag -l --format='%(contents)' vX.Y.Z)"
+   ```
+
+   This is a separate step from `git push origin vX.Y.Z` — GitHub Releases are not automatically created from annotated
+   tags.
+
+6. Avoid expanding scope during release cleanup; use follow-up issues for new Markdown dialects, embedded-code
    formatting, or broader configuration systems.
 
 ## Agent contract

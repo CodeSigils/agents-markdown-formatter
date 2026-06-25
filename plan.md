@@ -161,6 +161,9 @@ Release rules:
 - Keep runtime payload changes separate from repository-only CI, test, checker, or documentation maintenance.
 - Before tagging a runtime release, verify the exact commit with the development validation commands above, staged
   install verification, clean git status, and green GitHub Actions.
+- After pushing the annotated tag, create a GitHub Release from it with
+  `gh release create vX.Y.Z --title "vX.Y.Z" --notes "$(git tag -l --format='%(contents)' vX.Y.Z)"`. This is a separate
+  step from `git push origin vX.Y.Z` — GitHub Releases are not automatically created from tags.
 - Avoid adding new feature scope during release cleanup; capture new dialects, embedded-code formatting, or broad config
   systems as follow-up work instead.
 
