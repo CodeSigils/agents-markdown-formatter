@@ -162,6 +162,7 @@ function runDoctor(options = {}) {
     join(SKILL_DIR, "scripts", "check-structure.js"),
     join(SKILL_DIR, "scripts", "check-fences.js"),
     join(SKILL_DIR, "scripts", "check-tables.js"),
+    join(SKILL_DIR, "scripts", "check-pipes.js"),
   ];
 
   let ok = true;
@@ -387,7 +388,8 @@ function runStructuralValidation(filePath, includeFencesOnly = false) {
   return (
     runScript("check-structure.js", "--verify", filePath) &&
     runScript("check-fences.js", filePath) &&
-    runScript("check-tables.js", filePath)
+    runScript("check-tables.js", filePath) &&
+    runScript("check-pipes.js", filePath)
   );
 }
 

@@ -341,7 +341,7 @@ const PAYLOAD_PREFIXES = [
   "skills/markdown-formatter/scripts/",
 ];
 const KNOWN_PAYLOAD_CHECKS = new Set([
-  "check-fences.js", "check-structure.js", "check-tables.js",
+  "check-fences.js", "check-structure.js", "check-tables.js", "check-pipes.js",
 ]);
 for (const prefix of PAYLOAD_PREFIXES) {
   const unexpected = allFiles.filter((f) => {

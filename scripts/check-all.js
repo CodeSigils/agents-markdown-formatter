@@ -27,6 +27,7 @@ const CHECKS = [
   { name: 'check-structure', args: ['--verify'] },
   { name: 'check-fences', args: [] },
   { name: 'check-tables', args: [] },
+  { name: 'check-pipes', args: [] },
 ];
 
 function collectFiles(targets) {
