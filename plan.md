@@ -139,8 +139,9 @@ validate the Oxc/Oxfmt path.
 
 ## Release posture
 
-`v1.0.2` is the current published runtime release tag. It includes the `--doctor` runtime payload change and corrected
-release metadata after the superseded `v1.0.1` tag was cut with stale `v1.0.0` version metadata.
+`v1.0.3` is the current published runtime release tag. Released after `repairTableColumns`, `--doctor` version-range
+check, hardened child-process spawning, tab-only fence detection fix, and the CI matrix rework. See the `v1.0.3`
+changelog entry for the full list.
 
 Repository-only maintenance commits, such as CI runtime updates or anti-drift checker cleanup, do not automatically
 imply a new runtime release when the shipped files under `skills/markdown-formatter/` are unchanged. CI reads the exact

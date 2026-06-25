@@ -235,7 +235,7 @@ The skill follows a strict runtime allowlist:
 
 ## Release posture
 
-`v1.0.2` is the current runtime release. `main` may contain maintenance commits after that tag for CI, checks, or
+`v1.0.3` is the current runtime release. `main` may contain maintenance commits after that tag for CI, checks, or
 repository documentation, but those changes should not be treated as a runtime release unless files under
 `skills/markdown-formatter/` change and the staged payload is verified again.
 
