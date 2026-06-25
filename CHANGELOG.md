@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## v1.0.3
 
 - Add `repairTableColumns` to `--fix`: auto-pads GFM table rows to match the largest column count among header,
   delimiter, and data rows. Repairs the "header has 2 columns but separator has 3" pattern (and similar) before oxfmt
@@ -15,6 +15,19 @@
   `package.json`.
 - Bump oxfmt from 0.54.0 to 0.56.0. Cross-config validation confirms all 9 spike fixtures remain idempotent; 8 of 9 are
   byte-identical to source under the production config. Update tested-maximum in `--doctor` to 0.56.0.
+- Harden formatter child process spawning: add `getSpawnOptions()` helper for consistent encoding, timeout, and
+  environment handling. Refactor `getOxfmtExecutableNames()` and `getOxfmtPathCandidates()` to accept platform/cwd
+  options for testability.
+- Add `OXFMT_MAX_VERSION`, `semverCompare()`, and `isSupportedOxfmtVersion()` to `--doctor`: warns when the installed
+  oxfmt binary exceeds the spike-tested maximum. Document "formatter as a commodity" architecture in README.
+- Add "Fence policy" section to SKILL.md documenting structural validation rules: bare language-less fences are valid,
+  whitespace-only and leading-whitespace info strings are invalid, unclosed fences are invalid, post-format fence drift
+  triggers rollback.
+- Fix tab-only fence info string detection in `check-structure.js` (`fence.info.includes(" ")` →
+  `fence.info.length > 0`) so that fences like ` ```\t ` are properly flagged as invalid, matching `check-fences.js`
+  behavior.
+- Add `--help` integration test; clean up `mkdirSync` import in `cli.test.js`.
+- Remove fragile `relative()` path round-trip in `check-all.js` subdirectory recursion.
 
 ## v1.0.2
 

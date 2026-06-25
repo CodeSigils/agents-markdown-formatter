@@ -1,6 +1,6 @@
 # Agents Markdown Formatter
 
-[![v1.0.2](https://img.shields.io/badge/version-1.0.2-blue.svg)](skills/markdown-formatter/SKILL.md)
+[![v1.0.3](https://img.shields.io/badge/version-1.0.3-blue.svg)](skills/markdown-formatter/SKILL.md)
 [![CI](https://github.com/CodeSigils/agents-markdown-formatter/actions/workflows/ci.yml/badge.svg)](https://github.com/CodeSigils/agents-markdown-formatter/actions/workflows/ci.yml)
 
 Deterministic Markdown formatting for AI-agent-authored docs.
