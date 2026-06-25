@@ -12,7 +12,7 @@
 'use strict';
 
 const { spawnSync } = require('child_process');
-const { join, resolve, extname } = require('path');
+const { join, resolve, extname, relative } = require('path');
 const { readdirSync, statSync, existsSync } = require('fs');
 
 const ROOT = resolve(__dirname, '..');
