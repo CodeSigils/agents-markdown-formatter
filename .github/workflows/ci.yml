@@ -14,9 +14,9 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  ci:
+  precheck:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 5
 
     steps:
     - name: Checkout code
@@ -26,7 +26,7 @@ jobs:
       uses: actions/setup-node@v6
       with:
         node-version-file: .node-version
-        cache: "npm"
+        cache: npm
 
     - name: Install dependencies
       run: npm ci
@@ -45,14 +45,55 @@ jobs:
           exit 1
         fi
 
+  tests:
+    needs: precheck
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    strategy:
+      fail-fast: false
+      matrix:
+        suite:
+          - structural
+          - unit-integr
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v6
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v6
+      with:
+        node-version-file: .node-version
+        cache: npm
+
+    - name: Install dependencies
+      run: npm ci
+
     - name: Run structural guard tests
+      if: matrix.suite == 'structural'
       run: npm test
 
-    - name: Run unit tests
-      run: npm run test:unit
+    - name: Run unit and integration tests
+      if: matrix.suite == 'unit-integr'
+      run: node --test test/unit/*.test.js test/integration/*.test.js
 
-    - name: Run integration tests
-      run: npm run test:integration
+  verify:
+    needs: [precheck, tests]
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v6
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v6
+      with:
+        node-version-file: .node-version
+        cache: npm
+
+    - name: Install dependencies
+      run: npm ci
 
     - name: Verify staged runtime payload
       run: bash scripts/staged-install-verify.sh
@@ -60,17 +101,28 @@ jobs:
     - name: Run maintainer docs formatter check
       run: npm run format:check
 
-    - name: Run formatter check on clean fixtures only
-      run: node skills/markdown-formatter/src/index.js --check --all test/fixtures/current/ test/fixtures/oxfmt-spike/
-
-    - name: Test idempotence on fixture copies
+    - name: Fixture formatting check and idempotence
       run: |
         TMP_DIR=$(mktemp -d)
         trap 'rm -rf "$TMP_DIR"' EXIT
         mkdir -p "$TMP_DIR/input/current" "$TMP_DIR/input/oxfmt-spike"
         cp -a test/fixtures/current/. "$TMP_DIR/input/current/"
         cp -a test/fixtures/oxfmt-spike/. "$TMP_DIR/input/oxfmt-spike/"
+
+        # Verify formatting on copies (read-only)
+        node skills/markdown-formatter/src/index.js --check --all "$TMP_DIR/input/"
+
+        # First format pass
         node skills/markdown-formatter/src/index.js --all "$TMP_DIR/input/"
         cp -a "$TMP_DIR/input" "$TMP_DIR/after-first-pass"
+
+        # Second format pass
         node skills/markdown-formatter/src/index.js --all "$TMP_DIR/input/"
-        diff -rq "$TMP_DIR/input" "$TMP_DIR/after-first-pass" && echo "Idempotence: PASS" || (echo "Idempotence: FAIL" && exit 1)
+
+        # Idempotence: second pass must produce identical output
+        if diff -rq "$TMP_DIR/input" "$TMP_DIR/after-first-pass"; then
+          echo "Idempotence: PASS"
+        else
+          echo "Idempotence: FAIL"
+          exit 1
+        fi

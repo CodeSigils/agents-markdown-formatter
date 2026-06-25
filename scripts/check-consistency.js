@@ -34,8 +34,8 @@ function validateCiWorkflow() {
   const required = [
     { pattern: /oxfmt.*--version|oxfmt.*version/i, label: "verifies oxfmt version" },
     { pattern: /npm\s+test/i, label: "runs npm test (structural guards)" },
-    { pattern: /npm\s+run\s+test:unit/i, label: "runs unit tests" },
-    { pattern: /npm\s+run\s+test:integration/i, label: "runs integration tests" },
+    { pattern: /test\/unit\/.*\.test\.js/i, label: "runs unit tests" },
+    { pattern: /test\/integration\/.*\.test\.js/i, label: "runs integration tests" },
     { pattern: /npm\s+run\s+format:check/i, label: "checks maintainer docs formatting" },
     { pattern: /staged-install-verify\.sh/i, label: "verifies staged runtime payload" },
     { pattern: /node_modules\/\.bin\/oxfmt|npm\s+ci/i, label: "uses pinned npm oxfmt install" },
