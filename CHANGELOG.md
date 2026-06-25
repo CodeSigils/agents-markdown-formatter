@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+- Add `check-pipes.js`: detects adjacent double-pipe artifacts (`||`) in GFM table rows. Leading `||` creates phantom
+  empty first columns, internal `||` creates empty cells, trailing `||` creates phantom last columns. Correctly ignores
+  escaped pipes and inline code spans. Wired into `--validate`, `--verify`, `--guard`, and `--doctor` checks.
+- Add 8 unit tests for double-pipe detection covering leading, internal, trailing, escaped pipes, inline code, valid
+  tables, and non-table lines.
+- Add violation fixture `table-double-pipe.md` with all 3 patterns (4 total violation fixtures).
+- Document `check-pipes.js` in README shipped-payload tree and safety policy section.
+- Update `scripts/staged-install-verify.sh` allowlist to include `check-pipes.js`.
+
 ## v1.0.3
 
 - Add `repairTableColumns` to `--fix`: auto-pads GFM table rows to match the largest column count among header,

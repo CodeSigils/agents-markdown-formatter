@@ -16,6 +16,7 @@ RUNTIME_ALLOWLIST=(
     "skills/markdown-formatter/scripts/check-structure.js"
     "skills/markdown-formatter/scripts/check-fences.js"
     "skills/markdown-formatter/scripts/check-tables.js"
+    "skills/markdown-formatter/scripts/check-pipes.js"
 )
 
 # Define dev-only paths that MUST NOT appear in staged payload

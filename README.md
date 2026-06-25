@@ -1,6 +1,6 @@
 # Agents Markdown Formatter
 
-[![v1.0.3](https://img.shields.io/badge/version-1.0.3-blue.svg)](skills/markdown-formatter/SKILL.md)
+[![v1.0.4](https://img.shields.io/badge/version-1.0.4-blue.svg)](skills/markdown-formatter/SKILL.md)
 [![CI](https://github.com/CodeSigils/agents-markdown-formatter/actions/workflows/ci.yml/badge.svg)](https://github.com/CodeSigils/agents-markdown-formatter/actions/workflows/ci.yml)
 
 Deterministic Markdown formatting for AI-agent-authored docs.
@@ -102,6 +102,7 @@ formatting:
 - `check-tables.js` validates GFM table column counts and pipe consistency.
 - `check-fences.js` validates fence closure and accidental malformed info strings.
 - `check-structure.js` snapshots fences and tables before formatting, then compares them afterward.
+- `check-pipes.js` detects adjacent double pipes (||) in table rows, which create phantom empty columns.
 - `--guard` restores the original file content if post-format structure changes.
 
 Fence policy is intentionally structural, not style-only:
@@ -175,11 +176,11 @@ The installed skill payload contains only these files on the user's disk:
 └── scripts/
     ├── check-structure.js      # Structural snapshot, validation, and pre/post drift comparison
     ├── check-fences.js         # Fenced code block validator for info strings and closure rules
-    └── check-tables.js         # GFM table column-count validator
+    ├── check-tables.js         # GFM table column-count validator
+    └── check-pipes.js          # Double-pipe (adjacent pipe) artifact detection for GFM tables
 ```
 
-Repository-only files (`AGENTS.md`, `README.md`, `test/`, `package.json`, etc.) are excluded from the shipped
-payload.
+Repository-only files (`AGENTS.md`, `README.md`, `test/`, `package.json`, etc.) are excluded from the shipped payload.
 
 ## Prerequisites
 
@@ -235,7 +236,7 @@ The skill follows a strict runtime allowlist:
 
 ## Release posture
 
-`v1.0.3` is the current runtime release. `main` may contain maintenance commits after that tag for CI, checks, or
+`v1.0.4` is the current runtime release. `main` may contain maintenance commits after that tag for CI, checks, or
 repository documentation, but those changes should not be treated as a runtime release unless files under
 `skills/markdown-formatter/` change and the staged payload is verified again.
 
@@ -275,5 +276,5 @@ Agent behavior and constraints are defined in:
 - [`skills/markdown-formatter/SKILL.md`](skills/markdown-formatter/SKILL.md) — Hermes-compatible packaged skill
   definition
 
-Agents working on this repository must consult `AGENTS.md` before implementation work and use this
-repository's Oxc/Oxfmt validation path for edited Markdown files.
+Agents working on this repository must consult `AGENTS.md` before implementation work and use this repository's
+Oxc/Oxfmt validation path for edited Markdown files.

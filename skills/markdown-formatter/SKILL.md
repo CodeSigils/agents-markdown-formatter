@@ -1,7 +1,7 @@
 ---
 name: markdown-formatter
 description: "AI-agent-safe GFM and MDX Markdown formatter powered by oxfmt with structural guards"
-version: "1.0.3"
+version: "1.0.4"
 author: "CodeSigils"
 license: "MIT"
 compatibility: "hermes"
@@ -38,8 +38,8 @@ left as-is.
 
 AI agents often produce Markdown with long prose lines, inconsistent wrapping, fragile tables, and fenced examples that
 should stay untouched. This skill normalizes the Markdown container while keeping structural safety explicit: prose is
-bounded for stable review, embedded code remains opaque, and table/fence drift is caught by guard scripts rather than
-left to formatter configuration alone.
+bounded for stable review, embedded code remains opaque, and table/fence/pipe drift is caught by guard scripts rather
+than left to formatter configuration alone.
 
 ## Usage
 
@@ -60,7 +60,7 @@ From an installed payload, run the bundled `src/index.js` with Node from the ins
   snapshots
 - `--verify`: Run formatter and check structural integrity without writing changes
 - `--fences`: Validate fenced code block language info strings
-- `--validate`: Run structural, fence, and table validations
+- `--validate`: Run structural, fence, table, and pipe validations
 - `--doctor`: Check Node.js, Oxfmt, config, and payload readiness without modifying files
 - `--dry-run`: Show what would be changed without writing files
 - `--help`: Display help message
@@ -87,6 +87,14 @@ Fence validation is structural, not style-only:
 - Unclosed fences are invalid.
 - Post-format fence count/style drift is invalid and is rolled back by `--fix --guard`.
 
+## Table and pipe safety policy
+
+Table and pipe safety is enforced by guard scripts alongside the formatter:
+
+- `check-tables.js` validates GFM table column counts and pipe consistency.
+- `check-pipes.js` detects adjacent double-pipe artifacts (`||`) that create phantom empty columns — leading (phantom
+  first cell), internal (empty cell), and trailing (phantom last cell). Ignores escaped pipes and inline code spans.
+
 ## Supported file types
 
 - `.md`
@@ -100,7 +108,7 @@ Agents should run the Markdown formatter after creating or editing Markdown file
 1. Use `--check` in CI/CD pipelines to verify formatting compliance.
 2. Use `--fix --guard` during development when automatic formatting should be rollback-safe.
 3. Use `--verify` to check formatting, idempotence, and structural integrity without modifying files.
-4. Use `--validate` when you only need structural, fence, and table checks.
+4. Use `--validate` when you only need structural, fence, table, and pipe checks.
 5. Use `--doctor` before formatting work when installed runtime readiness is uncertain.
 
 ## Severity levels
