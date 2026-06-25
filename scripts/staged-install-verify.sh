@@ -20,7 +20,6 @@ RUNTIME_ALLOWLIST=(
 
 # Define dev-only paths that MUST NOT appear in staged payload
 DEV_ONLY_PATHS=(
-    "plan.md"
     "AGENTS.md"
     "README.md"
     "scripts/"

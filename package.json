@@ -8,9 +8,9 @@
     "test:verbose": "node scripts/check-all.js test/fixtures/",
     "test:unit": "node --test test/unit/*.test.js",
     "test:integration": "node --test test/integration/*.test.js",
-    "format": "node skills/markdown-formatter/src/index.js --fix README.md AGENTS.md CHANGELOG.md plan.md skills/markdown-formatter/SKILL.md",
-    "format:check": "node skills/markdown-formatter/src/index.js --check README.md AGENTS.md CHANGELOG.md plan.md skills/markdown-formatter/SKILL.md",
-    "verify": "node skills/markdown-formatter/src/index.js --verify README.md AGENTS.md CHANGELOG.md plan.md skills/markdown-formatter/SKILL.md"
+    "format": "node skills/markdown-formatter/src/index.js --fix README.md AGENTS.md CHANGELOG.md skills/markdown-formatter/SKILL.md",
+    "format:check": "node skills/markdown-formatter/src/index.js --check README.md AGENTS.md CHANGELOG.md skills/markdown-formatter/SKILL.md",
+    "verify": "node skills/markdown-formatter/src/index.js --verify README.md AGENTS.md CHANGELOG.md skills/markdown-formatter/SKILL.md"
   },
   "devDependencies": {
     "oxfmt": "0.56.0"

@@ -178,7 +178,7 @@ The installed skill payload contains only these files on the user's disk:
     └── check-tables.js         # GFM table column-count validator
 ```
 
-Repository-only files (`plan.md`, `AGENTS.md`, `README.md`, `test/`, `package.json`, etc.) are excluded from the shipped
+Repository-only files (`AGENTS.md`, `README.md`, `test/`, `package.json`, etc.) are excluded from the shipped
 payload.
 
 ## Prerequisites
@@ -275,5 +275,5 @@ Agent behavior and constraints are defined in:
 - [`skills/markdown-formatter/SKILL.md`](skills/markdown-formatter/SKILL.md) — Hermes-compatible packaged skill
   definition
 
-Agents working on this repository must consult `AGENTS.md` and `plan.md` before implementation work and use this
+Agents working on this repository must consult `AGENTS.md` before implementation work and use this
 repository's Oxc/Oxfmt validation path for edited Markdown files.

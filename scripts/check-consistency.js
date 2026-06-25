@@ -12,7 +12,7 @@ const { spawnSync } = require("child_process");
 
 const ROOT = resolve(__dirname, "..");
 
-// Files the plan.md "Target Repository / Skill Shape" section says should exist.
+// Files listed in the "Target Repository / Skill Shape" section that should exist.
 // Stale plan references are errors; missing repository-shape files are errors.
 
 function validateCiWorkflow() {
@@ -61,7 +61,6 @@ function validateCiWorkflow() {
 const PLAN_EXPECTED_REPO_SHAPE = new Set([
   "AGENTS.md",
   "README.md",
-  "plan.md",
   "CHANGELOG.md",
   ".node-version",
   ".oxfmtrc.json",
@@ -270,7 +269,6 @@ if (indexJs && indexJs.includes("--doctor")) {
   const doctorDocs = [
     ["README.md", readme],
     ["skills/markdown-formatter/SKILL.md", skillMd],
-    ["plan.md", read("plan.md")],
   ];
   for (const [file, content] of doctorDocs) {
     if (!content || !content.includes("--doctor")) {
