@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## v1.0.4
+
 - Add `check-pipes.js`: detects adjacent double-pipe artifacts (`||`) in GFM table rows. Leading `||` creates phantom
   empty first columns, internal `||` creates empty cells, trailing `||` creates phantom last columns. Correctly ignores
   escaped pipes and inline code spans. Wired into `--validate`, `--verify`, `--guard`, and `--doctor` checks.
