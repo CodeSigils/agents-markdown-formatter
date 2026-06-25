@@ -32,7 +32,6 @@ DEV_ONLY_PATHS=(
     ".omo/"
     ".open-mem/"
     "references/"
-    "skills/markdown-formatter/references/"
 )
 
 # Clean and create staging directory

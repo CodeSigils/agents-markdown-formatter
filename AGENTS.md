@@ -9,8 +9,8 @@ Agents working here MUST:
 1. Use **ripgrep** (grep tool) for searching codebases — never read entire files with `cat`, `head`, or `tail` when a
    targeted search suffices. For large files (>200 lines), use grep with context lines (`grep -C N`) to find the
    relevant section, then read only that section with offset/limit.
-2. Treat `references/prior-art/**` as historical/reference material unless a task explicitly promotes code into the
-   active implementation.
+2. Treat `prior-art/**` as historical/reference material unless a task explicitly promotes code into the active
+   implementation.
 3. Keep the installed runtime payload separate from repository-only planning, tests, fixtures, and development tooling.
 4. Build and verify the staged install artifact before claiming user-facing shipping readiness.
 5. Check edited Markdown files with the repository's Oxc/Oxfmt path, not external Markdown formatters or linters.
@@ -58,8 +58,8 @@ node skills/markdown-formatter/src/index.js --validate <file>  # structural + fe
 If the repository-owned wrapper or Oxfmt is unavailable, report that repository validation is unavailable instead of
 silently substituting another Markdown linter or formatter.
 
-Exception: raw formatter fixtures under `test/fixtures/` or `references/prior-art/**` may only be formatted when the
-task explicitly tests formatter behavior on a copy.
+Exception: raw formatter fixtures under `test/fixtures/` or `prior-art/**` may only be formatted when the task
+explicitly tests formatter behavior on a copy.
 
 ## STRICT / IMPORTANT: drift and stale information contract
 
@@ -87,8 +87,8 @@ Agents MUST NOT:
   instructions.
 - Claim user-facing shipping readiness unless staged install verification, docs, CI, and runtime payload boundaries all
   match.
-- Promote historical/prior-art material under `references/prior-art/**` into active implementation wording unless the
-  code was intentionally moved and tested.
+- Promote historical/prior-art material under `prior-art/**` into active implementation wording unless the code was
+  intentionally moved and tested.
 - Change CLI semantics such as `--all`, `--check`, `--verify`, `--validate`, `--guard`, or `--fences` without updating
   README, SKILL.md, plan, tests, consistency checks, and CI where applicable.
 

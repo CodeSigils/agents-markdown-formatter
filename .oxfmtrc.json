@@ -9,7 +9,6 @@
     "node_modules/**",
     "coverage/**",
     "dist/**",
-    "references/prior-art/**/node_modules/**",
     "fixtures/work/**",
     "fixtures/results/**"
   ]
