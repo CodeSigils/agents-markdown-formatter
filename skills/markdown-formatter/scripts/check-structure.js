@@ -122,7 +122,7 @@ function validateStructure(content) {
   const errors = [];
   for (const fence of fences) {
     if (!fence.closer) errors.push(`Unclosed fence: ${fence.opener}`);
-    if (fence.info.includes(" ") && fence.info.trim() === "") errors.push(`Empty language tag on fence opener: ${fence.opener} `);
+    if (fence.info.length > 0 && fence.info.trim() === "") errors.push(`Empty language tag on fence opener: ${fence.opener} `);
   }
   for (const table of tables) {
     if (table.header.colCount !== table.delimiter.colCount) errors.push(`Table column mismatch: header ${table.header.colCount} vs delimiter ${table.delimiter.colCount}`);

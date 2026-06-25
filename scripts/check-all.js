@@ -12,7 +12,7 @@
 'use strict';
 
 const { spawnSync } = require('child_process');
-const { join, resolve, extname, relative } = require('path');
+const { join, resolve, extname } = require('path');
 const { readdirSync, statSync, existsSync } = require('fs');
 
 const ROOT = resolve(__dirname, '..');
@@ -39,7 +39,7 @@ function collectFiles(targets) {
       for (const entry of readdirSync(absolute, { withFileTypes: true })) {
         const full = join(absolute, entry.name);
         if (entry.isDirectory()) {
-          files.push(...collectFiles([relative(ROOT, full)]));
+          files.push(...collectFiles([full]));
         } else if (VALID_EXTENSIONS.has(extname(entry.name))) {
           files.push(full);
         }

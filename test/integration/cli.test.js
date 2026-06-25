@@ -1,7 +1,7 @@
 const { describe, it } = require('node:test');
 const assert = require('node:assert/strict');
 const { spawnSync } = require('node:child_process');
-const { copyFileSync, existsSync, mkdtempSync, readFileSync, writeFileSync, rmSync } = require('node:fs');
+const { copyFileSync, existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync, rmSync } = require('node:fs');
 const { join, resolve } = require('node:path');
 const { tmpdir } = require('node:os');
 
@@ -22,8 +22,8 @@ describe('markdown formatter CLI integration', () => {
     try {
       const goodDir = join(dir, 'good');
       const badDir = join(dir, 'bad');
-      require('node:fs').mkdirSync(goodDir);
-      require('node:fs').mkdirSync(badDir);
+      mkdirSync(goodDir, { recursive: true });
+      mkdirSync(badDir, { recursive: true });
       writeFileSync(join(goodDir, 'clean.md'), '# Clean\n\nText.\n');
       writeFileSync(join(badDir, 'dirty.md'), '# Dirty\n\n| A | B |\n|---|---|\n| 1 | 2 |\n');
 
@@ -154,5 +154,15 @@ describe('markdown formatter CLI integration', () => {
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }
+  });
+
+  it('--help prints usage information and exits 0', () => {
+    const result = runCli(['--help']);
+
+    assert.equal(result.status, 0);
+    assert.match(result.stdout, /Markdown Formatter CLI/);
+    assert.match(result.stdout, /--check/);
+    assert.match(result.stdout, /--fix/);
+    assert.match(result.stdout, /--doctor/);
   });
 });
