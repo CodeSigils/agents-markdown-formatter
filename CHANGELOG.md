@@ -1,5 +1,7 @@
 # Changelog
 
+## Unreleased
+
 ## v1.0.3
 
 - Add `repairTableColumns` to `--fix`: auto-pads GFM table rows to match the largest column count among header,
