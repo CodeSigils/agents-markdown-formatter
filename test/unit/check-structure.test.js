@@ -88,6 +88,20 @@ describe('check-structure.js unit tests', () => {
       assert.strictEqual(tables[0].delimiter.colCount, 2);
       assert.deepStrictEqual(tables[0].rows, []);
     });
+
+    it('should ignore table-shaped text inside fenced code blocks', async () => {
+      const content = [
+        '```text',
+        '| a | b |',
+        '|---|---|---|',
+        '| 1 | 2 | 3 |',
+        '```',
+      ].join('\n');
+      const tables = extractTables(content);
+
+      assert.deepStrictEqual(tables, []);
+      assert.deepStrictEqual(validateStructure(content), []);
+    });
   });
 
   describe('buildSnapshot function', () => {
@@ -165,16 +179,15 @@ describe('check-structure.js unit tests', () => {
       assert.match(errors[0], /^Table row 1 column mismatch: row 3 vs header 2$/);
     });
 
-    it('should handle multiple errors', async () => {
+    it('should not validate table-shaped text after an unclosed fence opener', async () => {
       const content = '```js\nconsole.log("hello");\n\n| a | b |\n|---|---|---|\n| 1 | 2 | 3 |';
       const errors = validateStructure(content);
       
-      assert.strictEqual(errors.length, 3);
-      // Check that we have both types of errors
+      assert.strictEqual(errors.length, 1);
       const hasUnclosedFence = errors.some(e => e.includes('Unclosed fence'));
       const hasTableMismatch = errors.some(e => e.includes('Table column mismatch') || e.includes('Table row'));
       assert.strictEqual(hasUnclosedFence, true);
-      assert.strictEqual(hasTableMismatch, true);
+      assert.strictEqual(hasTableMismatch, false);
     });
   });
 

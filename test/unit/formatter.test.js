@@ -241,6 +241,18 @@ describe('repairTableColumns', () => {
     assert.equal(repairTableColumns(input), input);
   });
 
+  it('does not repair table-shaped text inside fenced code blocks', () => {
+    const input = [
+      '```text',
+      '| a | b |',
+      '|---|---|---|',
+      '| 1 | 2 |',
+      '```',
+    ].join('\n');
+
+    assert.equal(repairTableColumns(input), input);
+  });
+
   it('pads multiple data rows in the same table', () => {
     const input = [
       '| a | b | c |',

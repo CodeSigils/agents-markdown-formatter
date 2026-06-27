@@ -95,6 +95,23 @@ describe('markdown formatter CLI integration', () => {
     }
   });
 
+  it('--fix --dry-run does not repair-write malformed tables', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'markdown-formatter-fix-dry-run-'));
+    const file = join(dir, 'repairable.md');
+    try {
+      const original = '# Repairable\n\n| A | B |\n|---|---|---|\n| 1 | 2 |\n';
+      writeFileSync(file, original);
+
+      const result = runCli(['--fix', '--dry-run', file]);
+
+      assert.equal(result.status, 0, result.stdout + result.stderr);
+      assert.match(result.stdout + result.stderr, /Would format/);
+      assert.equal(readFileSync(file, 'utf8'), original);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
   it('--verify is read-only and fails on unformatted files', () => {
     const dir = mkdtempSync(join(tmpdir(), 'markdown-formatter-verify-'));
     const file = join(dir, 'dirty.md');

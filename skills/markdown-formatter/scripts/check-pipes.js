@@ -18,6 +18,7 @@
 
 const fs = require("fs");
 const process = require("process");
+const { getFenceBoundary } = require("./check-tables.js");
 
 /**
  * Detect double-pipe artifacts (adjacent pipes) in table rows.
@@ -30,9 +31,17 @@ const process = require("process");
 function detectDoublePipes(content) {
   const lines = content.split("\n");
   const issues = [];
+  let currentFence = null;
 
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
+    const fenceBoundary = getFenceBoundary(line, currentFence);
+    if (fenceBoundary !== null) {
+      currentFence = fenceBoundary || null;
+      continue;
+    }
+    if (currentFence) continue;
+
     if (!line.includes("||")) continue;
 
     // Must look like a pipe table row. Leading-pipe rows need at least one

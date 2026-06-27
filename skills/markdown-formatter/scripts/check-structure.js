@@ -16,7 +16,7 @@
 "use strict";
 
 const { readFileSync, writeFileSync, existsSync } = require("fs");
-const { splitTableCells, isDelimiterLine } = require("./check-tables.js");
+const { splitTableCells, isDelimiterLine, getFenceBoundary } = require("./check-tables.js");
 
 const VALID_MODES = ["--snapshot", "--check", "--guard", "--verify"];
 
@@ -78,8 +78,16 @@ function isPotentialTableRow(line) {
 function extractTables(content) {
   const tables = [];
   const lines = content.split("\n");
+  let currentFence = null;
 
   for (let i = 0; i < lines.length - 1; i++) {
+    const fenceBoundary = getFenceBoundary(lines[i], currentFence);
+    if (fenceBoundary !== null) {
+      currentFence = fenceBoundary || null;
+      continue;
+    }
+    if (currentFence) continue;
+
     if (!isPotentialTableRow(lines[i]) || !isDelimiterLine(lines[i + 1])) continue;
 
     const header = parseTableRow(lines[i]);

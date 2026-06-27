@@ -30,4 +30,16 @@ describe('check-tables.js unit tests', () => {
     assert.equal(errors.length, 1);
     assert.match(errors[0], /row 1 has 3 cols but header has 2/);
   });
+
+  it('ignores table-shaped text inside fenced code blocks', () => {
+    const content = [
+      '```text',
+      '| Name | Value |',
+      '| ---- | ----- | ----- |',
+      '| A | B | C |',
+      '```',
+    ].join('\n');
+
+    assert.deepStrictEqual(validateTables(content), []);
+  });
 });

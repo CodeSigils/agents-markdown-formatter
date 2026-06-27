@@ -26,7 +26,7 @@ const { readdirSync, statSync, existsSync, readFileSync, writeFileSync, copyFile
 const { join, resolve, extname, basename } = require("path");
 const { tmpdir } = require("os");
 
-const { splitTableCells, isDelimiterLine } = require('../scripts/check-tables.js');
+const { splitTableCells, isDelimiterLine, getFenceBoundary } = require('../scripts/check-tables.js');
 
 const SKILL_DIR = resolve(__dirname, "..");
 const OXFMT_CONFIG = join(SKILL_DIR, ".oxfmtrc.json");
@@ -245,8 +245,16 @@ function repairTableColumns(content) {
   const lines = content.split("\n");
   const result = [...lines];
   let modified = false;
+  let currentFence = null;
 
   for (let i = 0; i < lines.length - 1; i++) {
+    const fenceBoundary = getFenceBoundary(lines[i], currentFence);
+    if (fenceBoundary !== null) {
+      currentFence = fenceBoundary || null;
+      continue;
+    }
+    if (currentFence) continue;
+
     const header = lines[i];
     const delimiter = lines[i + 1];
 
@@ -326,10 +334,10 @@ function repairTableColumns(content) {
  * @returns {boolean} True if the operation writes to files.
  */
 function isWriteMode(args) {
-  if (args.fix || args.guard) return true;
   for (const flag of READ_ONLY_FLAGS) {
     if (args[flag]) return false;
   }
+  if (args.fix || args.guard) return true;
   return true; // no flags = write (default mode)
 }
 
@@ -404,10 +412,11 @@ function processFile(filePath, args) {
 
   // Repair table column mismatches before any formatting or validation
   // in write modes. This ensures oxfmt receives structurally valid tables.
-  if (isWriteMode(args)) {
-    const raw = readFileSync(filePath, "utf8");
-    const repaired = repairTableColumns(raw);
-    if (repaired !== raw) {
+  const writeMode = isWriteMode(args);
+  const originalContent = writeMode ? readFileSync(filePath, "utf8") : null;
+  if (writeMode) {
+    const repaired = repairTableColumns(originalContent);
+    if (repaired !== originalContent) {
       writeFileSync(filePath, repaired);
     }
   }
@@ -424,7 +433,6 @@ function processFile(filePath, args) {
       return true;
     }
     const snapshotPath = `${filePath}.structure.json`;
-    const originalContent = readFileSync(filePath, "utf8");
     const hadSnapshot = existsSync(snapshotPath);
     const previousSnapshot = hadSnapshot ? readFileSync(snapshotPath, "utf8") : null;
     try {

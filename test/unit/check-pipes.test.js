@@ -33,6 +33,16 @@ describe("check-pipes.js unit tests", () => {
     assert.equal(issues.length, 0);
   });
 
+  it("ignores adjacent pipes inside fenced code blocks", () => {
+    const issues = detectDoublePipes([
+      "```text",
+      "|| not | a | table ||",
+      "```",
+    ].join("\n"));
+
+    assert.equal(issues.length, 0);
+  });
+
   it("detects structural double pipes after ignored inline-code double pipes", () => {
     const issues = detectDoublePipes("| code | `x || y` || real | value |");
 

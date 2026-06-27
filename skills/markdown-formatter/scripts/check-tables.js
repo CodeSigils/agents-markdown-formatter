@@ -73,11 +73,30 @@ function isDelimiterLine(line) {
   return cells.every((cell) => /^:?-{1,}:?$/.test(cell.trim()));
 }
 
+function getFenceBoundary(line, currentFence = null) {
+  if (!currentFence) {
+    const opener = line.match(/^( {0,3})(`{3,}|~{3,})([^\n]*)$/);
+    if (!opener) return null;
+    return { style: opener[2][0], length: opener[2].length };
+  }
+
+  const closerPattern = new RegExp(`^ {0,3}${currentFence.style}{${currentFence.length},}\\s*$`);
+  return closerPattern.test(line) ? false : currentFence;
+}
+
 function validateTables(content) {
   const errors = [];
   const lines = content.split("\n");
+  let currentFence = null;
 
   for (let i = 0; i < lines.length - 1; i++) {
+    const fenceBoundary = getFenceBoundary(lines[i], currentFence);
+    if (fenceBoundary !== null) {
+      currentFence = fenceBoundary || null;
+      continue;
+    }
+    if (currentFence) continue;
+
     const header = lines[i];
     const delimiter = lines[i + 1];
 
@@ -136,6 +155,7 @@ function main(argv = process.argv.slice(2)) {
 module.exports = {
   splitTableCells,
   isDelimiterLine,
+  getFenceBoundary,
   validateTables,
   validateFile,
   main,

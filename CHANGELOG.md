@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+## v1.0.7
+
+- Make table validation, structural snapshots, pipe-safety checks, and automatic table repair ignore table-shaped text
+  inside fenced code blocks.
+- Make read-only flags absolute so `--fix --dry-run` and `--check --guard` cannot repair-write files before their
+  read-only handling runs.
+- Restore the true pre-repair file content if guarded write-mode formatting later fails or detects structural drift.
+
 ## v1.0.6
 
 - Tighten `check-pipes.js` so it scans all adjacent-pipe occurrences on a table row, catching structural `||` even when
