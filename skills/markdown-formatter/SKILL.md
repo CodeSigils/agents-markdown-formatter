@@ -87,12 +87,12 @@ Fence validation is structural, not style-only:
 Table and pipe safety is enforced by guard scripts alongside the formatter:
 
 - `check-tables.js` validates GFM table column counts and pipe consistency.
-- `check-pipes.js` detects adjacent double-pipe artifacts (`||`) that create phantom empty columns — leading (phantom
-  first cell), internal (empty cell), and trailing (phantom last cell). Ignores escaped pipes and inline code spans.
+- `check-pipes.js` detects adjacent pipes (`||`) that create empty cells per GFM §4.10 — leading (empty first
+  cell), internal (empty cell between columns), and trailing (empty trailing cell). Ignores escaped pipes and inline code spans. Exits 0 (diagnostic only).
 - Table validation, structural table snapshots, pipe-safety checks, and automatic table repair ignore table-shaped text
   inside fenced code blocks.
-- `--check`, `--fix`, `--dry-run`, and `--guard` run pipe-safety preflight before invoking oxfmt so malformed tables are
-  refused before the formatter can rewrite them.
+- `--check`, `--fix`, `--dry-run`, and `--guard` run pipe-safety preflight before invoking oxfmt so empty-cell diagnostics
+  are reported before formatting.
 
 ## Supported file types
 

@@ -43,7 +43,7 @@ describe('markdown formatter CLI integration', () => {
     assert.match(result.stderr, /row 1 has 4 cols but header has 2|Table row/);
   });
 
-  it('--fix refuses double-pipe tables before oxfmt can rewrite them', () => {
+  it('--fix formats double-pipe tables (valid GFM empty cells) with diagnostic', () => {
     const dir = mkdtempSync(join(tmpdir(), 'markdown-formatter-double-pipe-fix-'));
     const file = join(dir, 'double-pipe.md');
     try {
@@ -52,15 +52,14 @@ describe('markdown formatter CLI integration', () => {
 
       const result = runCli(['--fix', file]);
 
-      assert.notStrictEqual(result.status, 0);
-      assert.match(result.stdout + result.stderr, /Leading double pipe/);
-      assert.equal(readFileSync(file, 'utf8'), original);
+      assert.equal(result.status, 0, result.stdout + result.stderr);
+      assert.match(result.stdout + result.stderr, /adjacent pipes|empty cell/);
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }
   });
 
-  it('--dry-run fails double-pipe tables instead of reporting a safe format preview', () => {
+  it('--dry-run reports double-pipe table diagnostics and format preview', () => {
     const dir = mkdtempSync(join(tmpdir(), 'markdown-formatter-double-pipe-dry-run-'));
     const file = join(dir, 'double-pipe.md');
     try {
@@ -69,16 +68,15 @@ describe('markdown formatter CLI integration', () => {
 
       const result = runCli(['--dry-run', file]);
 
-      assert.notStrictEqual(result.status, 0);
-      assert.match(result.stdout + result.stderr, /Leading double pipe/);
-      assert.doesNotMatch(result.stdout + result.stderr, /Would format/);
+      assert.equal(result.status, 0, result.stdout + result.stderr);
+      assert.match(result.stdout + result.stderr, /adjacent pipes|empty cell/);
       assert.equal(readFileSync(file, 'utf8'), original);
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }
   });
 
-  it('--check fails double-pipe tables before formatting checks', () => {
+  it('--check reports double-pipe table diagnostics', () => {
     const dir = mkdtempSync(join(tmpdir(), 'markdown-formatter-double-pipe-check-'));
     const file = join(dir, 'double-pipe.md');
     try {
@@ -87,8 +85,8 @@ describe('markdown formatter CLI integration', () => {
 
       const result = runCli(['--check', file]);
 
-      assert.notStrictEqual(result.status, 0);
-      assert.match(result.stdout + result.stderr, /Leading double pipe/);
+      // check-pipes prints diagnostics (exit 0), then oxfmt --check validates formatting
+      assert.match(result.stdout + result.stderr, /adjacent pipes|empty cell/);
       assert.equal(readFileSync(file, 'utf8'), original);
     } finally {
       rmSync(dir, { recursive: true, force: true });

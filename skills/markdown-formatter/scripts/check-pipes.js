@@ -1,17 +1,18 @@
 #!/usr/bin/env node
 /**
- * check-pipes.js - Detect adjacent pipe artifacts (double pipes) in GFM tables.
+ * check-pipes.js - Detect adjacent-pipe patterns (empty cells) in GFM tables.
  *
- * Double pipes (||) create phantom empty columns: leading || adds an empty first
- * column, internal || creates empty cells, trailing || adds an empty last column.
- * These are syntactically valid GFM but almost always unintended.
+ * Per GFM §4.10 (https://github.github.com/gfm/#tables-extension-), consecutive
+ * pipes (||) create valid empty cells. This checker reports occurrences as
+ * neutral diagnostics — they are not structural errors.
  *
- * This checker distinguishes real double-pipe artifacts from:
- *   - Escaped pipes (\\|\\|) — these are literal pipe characters
+ * The checker distinguishes empty cells from:
+ *   - Escaped pipes (\|\|) — these are literal pipe characters
  *   - Inline code spans containing `||` — these are not structural issues
+ *   - Fenced code blocks — skipped entirely
  *
  * Usage: node check-pipes.js <filePath...>
- * Exits 0 if all files are valid, 1 if violations are found.
+ * Exits 0 always (diagnostics only). Exits 1 on file read errors.
  */
 
 "use strict";
@@ -21,14 +22,13 @@ const process = require("process");
 const { getFenceBoundary } = require("./check-tables.js");
 
 /**
- * Detect double-pipe artifacts (adjacent pipes) in table rows.
- * Distinguishes leading (phantom first column), internal (empty cell), and
- * trailing (phantom last column) patterns.
+ * Detect adjacent-pipe patterns (empty cells) in GFM table rows.
+ * Reports leading, internal, and trailing patterns.
  *
  * @param {string} content File text.
  * @returns {Array<{lineIndex: number, line: string, detail: string}>} Issues found.
  */
-function detectDoublePipes(content) {
+function detectAdjacentPipes(content) {
   const lines = content.split("\n");
   const issues = [];
   let currentFence = null;
@@ -90,10 +90,10 @@ function detectDoublePipes(content) {
       line,
       detail:
         trimmed.startsWith("||")
-          ? "Leading double pipe (phantom empty first column)"
+          ? "Leading adjacent pipes (creates empty first cell — valid GFM)"
           : trimmed.endsWith("||")
-            ? "Trailing double pipe (phantom empty last column)"
-            : "Adjacent double pipe (possible empty cell or merge artifact)",
+            ? "Trailing adjacent pipes (creates empty trailing cell — valid GFM)"
+            : "Adjacent pipes between columns (creates empty cell — valid GFM)",
     });
   }
 
@@ -101,13 +101,13 @@ function detectDoublePipes(content) {
 }
 
 /**
- * Validate a single file for double-pipe violations.
+ * Validate a single file for adjacent-pipe patterns.
  *
  * @param {string} content File text.
- * @returns {Array<string>} Human-readable error messages.
+ * @returns {Array<string>} Human-readable diagnostic messages.
  */
 function validatePipes(content) {
-  const issues = detectDoublePipes(content);
+  const issues = detectAdjacentPipes(content);
   return issues.map(
     (issue) => `Line ${issue.lineIndex + 1}: ${issue.detail}`,
   );
@@ -117,7 +117,7 @@ function validatePipes(content) {
  * Validate a file by path.
  *
  * @param {string} filePath Path to markdown file.
- * @returns {Array<string>} Human-readable error messages.
+ * @returns {Array<string>} Human-readable diagnostic messages.
  */
 function validateFile(filePath) {
   const content = fs.readFileSync(filePath, "utf8");
@@ -131,25 +131,21 @@ function main(argv = process.argv.slice(2)) {
     return;
   }
 
-  let failed = false;
   for (const filePath of argv) {
     try {
-      const errors = validateFile(filePath);
-      if (errors.length > 0) {
-        errors.forEach((e) => console.error(`${filePath}: ${e}`));
-        failed = true;
+      const diagnostics = validateFile(filePath);
+      if (diagnostics.length > 0) {
+        diagnostics.forEach((e) => console.warn(`${filePath}: ${e}`));
       }
     } catch (err) {
       console.error(`Error reading file ${filePath}: ${err.message}`);
-      failed = true;
+      process.exitCode = 1;
     }
   }
-
-  process.exitCode = failed ? 1 : 0;
 }
 
 module.exports = {
-  detectDoublePipes,
+  detectAdjacentPipes,
   validatePipes,
   validateFile,
   main,

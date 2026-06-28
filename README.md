@@ -103,11 +103,10 @@ formatting:
 - `check-tables.js` validates GFM table column counts and pipe consistency.
 - `check-fences.js` validates fence closure and accidental malformed info strings.
 - `check-structure.js` snapshots fences and tables before formatting, then compares them afterward.
-- `check-pipes.js` detects adjacent double pipes (||) in table rows, which create phantom empty columns.
+- `check-pipes.js` detects adjacent pipes (`||`) in table rows, which create valid empty cells per GFM §4.10. Reports them as diagnostics — not errors.
 - Table validation, structural table snapshots, pipe-safety checks, and automatic table repair ignore table-shaped text
   inside fenced code blocks.
-- `--check`, `--fix`, `--dry-run`, and `--guard` run `check-pipes.js` before `oxfmt`, so malformed tables fail before
-  the formatter can rewrite them.
+- `--check`, `--fix`, `--dry-run`, and `--guard` run `check-pipes.js` before `oxfmt`, so adjacent-pipe diagnostics are reported before formatting.
 - `--guard` restores the original file content if post-format structure changes.
 
 Fence policy is intentionally structural, not style-only. See the [shipped SKILL.md](skills/markdown-formatter/SKILL.md)
@@ -177,7 +176,7 @@ The installed skill payload contains only these files on the user's disk:
     ├── check-structure.js      # Structural snapshot, validation, and pre/post drift comparison
     ├── check-fences.js         # Fenced code block validator for info strings and closure rules
     ├── check-tables.js         # GFM table column-count validator
-    └── check-pipes.js          # Double-pipe (adjacent pipe) artifact detection for GFM tables
+    └── check-pipes.js          # Adjacent-pipe (empty cell) diagnostic for GFM tables
 ```
 
 Repository-only files (`AGENTS.md`, `README.md`, `test/`, `package.json`, etc.) are excluded from the shipped payload.
