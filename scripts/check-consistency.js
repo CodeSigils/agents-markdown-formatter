@@ -1,202 +1,89 @@
 #!/usr/bin/env node
 /**
  * check-consistency.js - Anti-drift consistency checker for markdown-formatter.
+ * Orchestrates focused validators and runs cross-document checks.
  * Dev-only: not shipped in the runtime skill payload.
  */
 
 "use strict";
 
-const { readFileSync, existsSync, readdirSync } = require("fs");
-const { join, resolve } = require("path");
-const { spawnSync } = require("child_process");
+const FORMAT_FILES = require("./format-files-list");
+const { read, extractFrontmatterVersion, extractBadgeVersion, findCliFlags, extractRuntimeNodeMinVersion } = require("./validators/common");
+const { validateCi } = require("./validators/ci");
+const { validateRepoShape } = require("./validators/repo-shape");
+const { validateReleaseDrift } = require("./validators/release-drift");
 
-const ROOT = resolve(__dirname, "..");
+// ---------------------------------------------------------------------------
+// Read all source files once
+// ---------------------------------------------------------------------------
 
-// Files listed in the "Target Repository / Skill Shape" section that should exist.
-// Stale plan references are errors; missing repository-shape files are errors.
-
-function validateCiWorkflow() {
-  const ci = read(".github/workflows/ci.yml");
-  if (!ci) {
-    warnings.push(".github/workflows/ci.yml not found — consider adding CI");
-    return;
-  }
-  const checks = [
-    { pattern: /markdownlint/i, label: "uses markdownlint (not oxfmt)" },
-    { pattern: /npx\s+markdown/i, label: "uses npx markdownlint" },
-    { pattern: /npx\s+oxfmt/i, label: "uses npx oxfmt (should use pinned npm dependency or PATH)" },
-    { pattern: /test\/fixtures\/violations/i, label: "includes violations/ in formatter check (will fail CI)" },
-  ];
-  for (const { pattern, label } of checks) {
-    if (pattern.test(ci)) {
-      errors.push(`ci.yml: ${label}`);
-    }
-  }
-  const required = [
-    { pattern: /oxfmt.*--version|oxfmt.*version/i, label: "verifies oxfmt version" },
-    { pattern: /npm\s+test/i, label: "runs npm test (structural guards)" },
-    { pattern: /test\/unit\/.*\.test\.js/i, label: "runs unit tests" },
-    { pattern: /test\/integration\/.*\.test\.js/i, label: "runs integration tests" },
-    { pattern: /npm\s+run\s+format:check/i, label: "checks maintainer docs formatting" },
-    { pattern: /staged-install-verify\.sh/i, label: "verifies staged runtime payload" },
-    { pattern: /node_modules\/\.bin\/oxfmt|npm\s+ci/i, label: "uses pinned npm oxfmt install" },
-    { pattern: /CHECK_BASE_REF/i, label: "sets CHECK_BASE_REF for release-drift checks" },
-    { pattern: /fetch-depth:\s*0/i, label: "uses full git depth for diff history in precheck" },
-  ];
-  for (const { pattern, label } of required) {
-    if (!pattern.test(ci)) {
-      warnings.push(`ci.yml: missing ${label}`);
-    }
-  }
-  const nodeVersionFile = read(".node-version");
-  const ciNodeVersion = nodeVersionFile ? extractNodeVersionFile(nodeVersionFile) : null;
-  if (!ciNodeVersion) {
-    errors.push(".node-version is missing or unreadable");
-  }
-  if (!/node-version-file:\s*\.node-version/.test(ci)) {
-    warnings.push("ci.yml: setup-node should use node-version-file: .node-version for CI validation");
-  }
-}
-
-const PLAN_EXPECTED_REPO_SHAPE = new Set([
-  "AGENTS.md",
+const files = {};
+for (const f of [
   "README.md",
+  "AGENTS.md",
   "CHANGELOG.md",
-  ".node-version",
   ".oxfmtrc.json",
-  ".github/workflows/ci.yml",
+  ".node-version",
   "package.json",
-  "scripts/check-all.js",
-  "scripts/check-consistency.js",
-  "scripts/release.sh",
-  "scripts/staged-install-verify.sh",
+  ".github/workflows/ci.yml",
   "skills/markdown-formatter/SKILL.md",
   "skills/markdown-formatter/.oxfmtrc.json",
   "skills/markdown-formatter/src/index.js",
-  "skills/markdown-formatter/scripts/check-fences.js",
-  "skills/markdown-formatter/scripts/check-structure.js",
-  "skills/markdown-formatter/scripts/check-tables.js",
-  "skills/markdown-formatter/scripts/check-pipes.js",
-  "test/",
-]);
-
-// Historical lint-era artifacts that must not reappear in active implementation docs.
-const HISTORICAL_LINT_ARTIFACTS = new Set([
-  "lint.js",
-  "mdformat.js",
-  "post-write.js",
-  "references/rules.md",
-  "references/table-validate.js",
-  "test/formatter.test.js",
-  "test/structure.test.js",
-  "test/cli.test.js",
-]);
-
-function findAllFiles(dir, base = "") {
-  const results = [];
-  try {
-    for (const entry of readdirSync(join(dir, base), { withFileTypes: true })) {
-      const path = base ? `${base}/${entry.name}` : entry.name;
-      if (entry.isDirectory()) {
-        results.push(path + "/");
-        results.push(...findAllFiles(dir, path));
-      } else {
-        results.push(path);
-      }
-    }
-  } catch { /* ignore */ }
-  return results;
+]) {
+  files[f] = read(f);
 }
 
-function read(file) {
-  try {
-    return readFileSync(join(ROOT, file), "utf8");
-  } catch {
-    return null;
-  }
-}
-
-function extractFrontmatterVersion(content) {
-  const m = content.match(/^version:\s*["']?([^"'\n]+)["']?\s*$/m);
-  return m ? m[1].trim() : null;
-}
-
-function extractBadgeVersion(content) {
-  const m = content.match(/v(\d+\.\d+\.\d+(?:-[a-z0-9]+)?)/i);
-  return m ? m[1] : null;
-}
-
-function findCliFlags(content) {
-  const setMatch = content.match(/LONG_FLAGS\s*=\s*new\s+Set\(\s*\[([^\]]+)\]/s);
-  if (!setMatch) return [];
-  return setMatch[1]
-    .split(",")
-    .map((s) => "--" + s.trim().replace(/['"]/g, ""))
-    .filter((f) => f !== "--");
-}
-
-function extractRuntimeNodeMinVersion(content) {
-  const m = content.match(/NODE_RUNTIME_MIN_VERSION\s*=\s*(\d+)/);
-  return m ? Number(m[1]) : null;
-}
-
-function extractNodeVersionFile(content) {
-  const m = content.trim().match(/^(?:v)?(\d+)(?:\.\d+\.\d+)?$/);
-  return m ? Number(m[1]) : null;
-}
-
-const ACTIVE_DRIFT_CHECK_PATTERNS = [
-  "skills/markdown-formatter/SKILL.md",
-  "skills/markdown-formatter/src/index.js",
-  "skills/markdown-formatter/scripts/check-structure.js",
-  "skills/markdown-formatter/scripts/check-fences.js",
-  "skills/markdown-formatter/scripts/check-tables.js",
-  "skills/markdown-formatter/scripts/check-pipes.js",
-  "README.md",
-  "AGENTS.md",
-  "CHANGELOG.md",
-];
-
-const KNOWN_OXFMT_KEYS = new Set([
-  "tabWidth", "printWidth", "endOfLine", "insertFinalNewline",
-  "proseWrap", "embeddedLanguageFormatting", "ignorePatterns",
-]);
+// ---------------------------------------------------------------------------
+// Aggregate results from sub-validators
+// ---------------------------------------------------------------------------
 
 const errors = [];
 const warnings = [];
 
-const readme = read("README.md");
-const skillMd = read("skills/markdown-formatter/SKILL.md");
-const indexJs = read("skills/markdown-formatter/src/index.js");
-const agentsMd = read("AGENTS.md");
-const oxfmtrc = read(".oxfmtrc.json");
-const skillOxfmtrc = read("skills/markdown-formatter/.oxfmtrc.json");
-const runtimeMinNodeVersion = indexJs ? extractRuntimeNodeMinVersion(indexJs) : null;
+function add(result) {
+  errors.push(...result.errors);
+  warnings.push(...result.warnings);
+}
 
+add(validateCi(files));
+add(validateRepoShape());
+add(validateReleaseDrift(files));
+
+// ---------------------------------------------------------------------------
+// Cross-document consistency checks
+// ---------------------------------------------------------------------------
+
+const readme = files["README.md"];
+const skillMd = files["skills/markdown-formatter/SKILL.md"];
+const indexJs = files["skills/markdown-formatter/src/index.js"];
+const agentsMd = files["AGENTS.md"];
+const oxfmtrc = files[".oxfmtrc.json"];
+const skillOxfmtrc = files["skills/markdown-formatter/.oxfmtrc.json"];
+const pkgJson = files["package.json"];
+
+// Node.js runtime min version
+const runtimeMinNodeVersion = indexJs ? extractRuntimeNodeMinVersion(indexJs) : null;
 if (!runtimeMinNodeVersion) {
   errors.push("skills/markdown-formatter/src/index.js: NODE_RUNTIME_MIN_VERSION is missing or unreadable");
 }
 
-const pkgJson = read("package.json");
+// package.json: oxfmt pinning and engines.node
 if (pkgJson) {
   try {
     const pkg = JSON.parse(pkgJson);
+
+    // oxfmt must be pinned exactly (no ranges)
     const devDeps = pkg.devDependencies || {};
     const pkgVersion = devDeps.oxfmt;
     if (pkgVersion) {
-      const latest = "0.56.0";
-      if (pkgVersion !== latest) {
-        if (/^[~^*><=]/.test(pkgVersion)) {
-          errors.push(`oxfmt in package.json must be pinned exactly; found "${pkgVersion}"`);
-        } else {
-          warnings.push(
-            `oxfmt in package.json is ${pkgVersion}, latest is ${latest} — consider upgrading`
-          );
-        }
+      if (/^[~^*><=]/.test(pkgVersion)) {
+        errors.push(`oxfmt in package.json must be pinned exactly; found "${pkgVersion}"`);
       }
     } else {
       warnings.push("oxfmt not found in package.json devDependencies");
     }
+
+    // engines.node must match source
     const nodeReq = pkg.engines && pkg.engines.node;
     const runtimeMin = `>=${runtimeMinNodeVersion}`;
     if (!nodeReq) {
@@ -209,6 +96,7 @@ if (pkgJson) {
   }
 }
 
+// Stale reference checks across active docs
 const staleChecks = [
   { pattern: /markdownlint-cli2/, reason: "old formatter tool" },
   { pattern: /npx\s+markdownlint/, reason: "old linter via npx" },
@@ -216,6 +104,31 @@ const staleChecks = [
   { pattern: /name:\s*markdown-lint/, reason: "skill name should be 'markdown-formatter'" },
 ];
 
+const ACTIVE_DRIFT_CHECK_PATTERNS = [
+  ...FORMAT_FILES,
+  "skills/markdown-formatter/src/index.js",
+  "skills/markdown-formatter/scripts/check-structure.js",
+  "skills/markdown-formatter/scripts/check-fences.js",
+  "skills/markdown-formatter/scripts/check-tables.js",
+  "skills/markdown-formatter/scripts/check-pipes.js",
+];
+
+for (const [file, content] of [
+  ["AGENTS.md", agentsMd],
+  ["README.md", readme],
+  ["skills/markdown-formatter/SKILL.md", skillMd],
+  ["skills/markdown-formatter/src/index.js", indexJs],
+]) {
+  if (!content) continue;
+  if (!ACTIVE_DRIFT_CHECK_PATTERNS.some((p) => file.startsWith(p))) continue;
+  for (const { pattern, reason } of staleChecks) {
+    if (pattern.test(content)) {
+      errors.push(`stale ref in ${file}: "${reason}"`);
+    }
+  }
+}
+
+// Version badge alignment: README vs SKILL.md frontmatter
 if (readme && skillMd) {
   const badgeVer = extractBadgeVersion(readme);
   const frontVer = extractFrontmatterVersion(skillMd);
@@ -224,11 +137,9 @@ if (readme && skillMd) {
   } else if (!badgeVer && frontVer) {
     warnings.push(`README: no version badge found (SKILL.md has "${frontVer}")`);
   }
-} else if (skillMd && !readme) {
-  warnings.push("README.md not found — skipping version badge check");
 }
 
-// package.json version must match SKILL.md frontmatter for local consistency.
+// package.json version vs SKILL.md frontmatter
 if (pkgJson && skillMd) {
   try {
     const pkg = JSON.parse(pkgJson);
@@ -240,19 +151,27 @@ if (pkgJson && skillMd) {
   } catch { /* already handled above */ }
 }
 
-// Staged artifact should match source for development confidence.
-// This is a warning because the artifact is gitignored and regenerated
-// by staged-install-verify.sh, but staleness can mislead local inspection.
+// Staged-install staleness
 const STAGED_DIR = "staged-install";
-{
-  const stagedIndex = read(join(STAGED_DIR, "skills/markdown-formatter/src/index.js"));
-  const sourceIndex = read("skills/markdown-formatter/src/index.js");
+const { readFileSync } = require("fs");
+const { join } = require("path");
+const { ROOT } = require("./validators/common");
+
+try {
+  const stagedIndex = readFileSync(join(ROOT, STAGED_DIR, "skills/markdown-formatter/src/index.js"), "utf8");
+  const sourceIndex = readFileSync(join(ROOT, "skills/markdown-formatter/src/index.js"), "utf8");
   if (stagedIndex && sourceIndex && stagedIndex !== sourceIndex) {
     warnings.push(
       "staged-install/ is stale — run bash scripts/staged-install-verify.sh to regenerate"
     );
   }
-}
+} catch { /* staged dir or files may not exist — not an error */ }
+
+// CLI flag documentation coverage
+const KNOWN_OXFMT_KEYS = new Set([
+  "tabWidth", "printWidth", "endOfLine", "insertFinalNewline",
+  "proseWrap", "embeddedLanguageFormatting", "ignorePatterns",
+]);
 
 if (indexJs && skillMd) {
   const flags = findCliFlags(indexJs);
@@ -260,8 +179,6 @@ if (indexJs && skillMd) {
     if (!skillMd.includes(flag)) {
       errors.push(`CLI flag "${flag}" in index.js not documented in SKILL.md`);
     }
-  }
-  for (const flag of flags) {
     if (readme && !readme.includes(flag)) {
       warnings.push(`CLI flag "${flag}" in index.js not documented in README.md`);
     }
@@ -283,6 +200,7 @@ if (indexJs && indexJs.includes("--doctor")) {
   }
 }
 
+// oxfmt config alignment
 if (oxfmtrc) {
   try {
     const cfg = JSON.parse(oxfmtrc);
@@ -302,133 +220,9 @@ if (!skillOxfmtrc) {
   errors.push("root .oxfmtrc.json and skills/markdown-formatter/.oxfmtrc.json differ");
 }
 
-for (const [file, content] of [
-  ["AGENTS.md", agentsMd],
-  ["README.md", readme],
-  ["skills/markdown-formatter/SKILL.md", skillMd],
-  ["skills/markdown-formatter/src/index.js", indexJs],
-]) {
-  if (!content) continue;
-  if (!ACTIVE_DRIFT_CHECK_PATTERNS.some((p) => file.startsWith(p))) continue;
-  for (const { pattern, reason } of staleChecks) {
-    if (pattern.test(content)) {
-      errors.push(`stale ref in ${file}: "${reason}"`);
-    }
-  }
-}
-
-const EXCLUDE_DIRS = new Set(["node_modules", ".git", ".omo", ".open-mem", "oxfmt-spike"]);
-const allFiles = findAllFiles(ROOT).filter((f) => {
-  const parts = f.split("/");
-  return !parts.some((p) => EXCLUDE_DIRS.has(p));
-});
-
-for (const expected of PLAN_EXPECTED_REPO_SHAPE) {
-  if (expected.endsWith("/")) {
-    if (!allFiles.some((f) => f.startsWith(expected))) {
-      errors.push(`plan drift: expected directory "${expected}" is missing`);
-    }
-  } else if (!existsSync(join(ROOT, expected))) {
-    errors.push(`plan drift: expected file "${expected}" is missing`);
-  }
-}
-
-for (const stale of HISTORICAL_LINT_ARTIFACTS) {
-  if (existsSync(join(ROOT, stale))) {
-    errors.push(`historical lint artifact "${stale}" exists but should not`);
-  }
-}
-
-const PAYLOAD_PREFIXES = [
-  "skills/markdown-formatter/src/",
-  "skills/markdown-formatter/scripts/",
-];
-const KNOWN_PAYLOAD_CHECKS = new Set([
-  "check-fences.js", "check-structure.js", "check-tables.js", "check-pipes.js",
-]);
-for (const prefix of PAYLOAD_PREFIXES) {
-  const unexpected = allFiles.filter((f) => {
-    if (!f.startsWith(prefix)) return false;
-    if (f.endsWith("/")) return false;
-    const name = f.slice(prefix.length);
-    return name.startsWith("check-") && !KNOWN_PAYLOAD_CHECKS.has(name);
-  });
-  for (const u of unexpected) {
-    errors.push(`plan drift: unexpected file in skill payload: "${u}"`);
-  }
-}
-
-validateCiWorkflow();
-
 // ---------------------------------------------------------------------------
-// Release-drift checks: runtime payload changes must track in CHANGELOG
-// and the SKILL.md version should reflect accumulated changes.
+// Reporting
 // ---------------------------------------------------------------------------
-
-function getChangedFilesSince(ref) {
-  const result = spawnSync(
-    "git", ["diff", "--name-only", ref, "HEAD"],
-    { cwd: ROOT, encoding: "utf8", timeout: 10000 }
-  );
-  if (result.error || result.status !== 0) return null;
-  return result.stdout.trim().split("\n").filter((f) => f.length > 0);
-}
-
-function getLatestTagVersion() {
-  const result = spawnSync(
-    "git", ["tag", "-l", "v*", "--sort=-version:refname"],
-    { cwd: ROOT, encoding: "utf8", timeout: 10000 }
-  );
-  if (result.error || result.status !== 0 || !result.stdout.trim()) return null;
-  const tag = result.stdout.trim().split("\n")[0];
-  return tag.replace(/^v/, "");
-}
-
-const RUNTIME_DIRS = ["skills/markdown-formatter/"];
-
-function isRuntimeFile(file) {
-  return RUNTIME_DIRS.some((d) => file.startsWith(d));
-}
-
-const baseRef = process.env.CHECK_BASE_REF || "origin/main";
-const changedFiles = getChangedFilesSince(baseRef);
-
-if (changedFiles === null) {
-  warnings.push(`release-drift: git diff against "${baseRef}" failed (no remote or shallow clone); skipping checks`);
-} else {
-  const runtimeChanges = changedFiles.filter(isRuntimeFile);
-
-  // 1. CHANGELOG completeness: runtime changes must have corresponding Unreleased entries.
-  if (runtimeChanges.length > 0) {
-    const changelogPath = "CHANGELOG.md";
-    if (!changedFiles.includes(changelogPath)) {
-      errors.push(
-        `release-drift: ${runtimeChanges.length} runtime file(s) changed but ${changelogPath} did not — ` +
-        `add entries under "## Unreleased"`
-      );
-    } else {
-      const changelog = read(changelogPath);
-      if (changelog && !changelog.includes("## Unreleased")) {
-        errors.push(
-          `release-drift: ${changelogPath} changed but missing "## Unreleased" section — ` +
-          `add entries before the first versioned heading`
-        );
-      }
-    }
-  }
-
-  // 2. Version drift: if runtime files changed since the latest tag, warn when version hasn't moved.
-  const latestTagVer = getLatestTagVersion();
-  if (runtimeChanges.length > 0 && latestTagVer) {
-    const currentVer = extractFrontmatterVersion(skillMd || "");
-    if (currentVer && currentVer === latestTagVer) {
-      warnings.push(
-        `release-drift: ${runtimeChanges.length} runtime file(s) changed since tag v${latestTagVer} ` +
-        `but SKILL.md version is still "${currentVer}" — consider a release`
-      );
-    }
-  }
-}
 
 if (errors.length > 0) {
   console.error("check-consistency ERRORS:");

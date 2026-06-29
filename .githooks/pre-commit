@@ -1,0 +1,17 @@
+#!/bin/sh
+#
+# Pre-commit hook: runs formatting check and test suite before every commit.
+# Installed via `git config core.hooksPath .githooks` (automatic via npm prepare).
+#
+
+set -e
+
+echo "=== Pre-commit: checking formatting ==="
+npm run format:check
+
+echo ""
+echo "=== Pre-commit: running tests ==="
+npm test
+
+echo ""
+echo "=== Pre-commit: passed ==="

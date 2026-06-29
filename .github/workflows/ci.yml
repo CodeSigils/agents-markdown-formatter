@@ -75,7 +75,7 @@ jobs:
 
     - name: Run structural guard tests
       if: matrix.suite == 'structural'
-      run: npm test
+      run: npm run test:structural
 
     - name: Run unit and integration tests
       if: matrix.suite == 'unit-integr'
