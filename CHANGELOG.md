@@ -2,10 +2,10 @@
 
 ## Unreleased
 
-- **BREAKING: check-pipes.js now treats `||` as valid GFM empty-cell syntax (exit 0, diagnostic-only).**
-  Function renamed `detectDoublePipes` → `detectAdjacentPipes`. Diagnostic messages reframed from "phantom
-  empty column" to "valid GFM empty cell". All CLI modes (--check, --fix, --dry-run, --guard) pass through
-  instead of blocking. Diagnostics printed to stderr.
+- **BREAKING: check-pipes.js now treats `||` as valid GFM empty-cell syntax (exit 0, diagnostic-only).** Function
+  renamed `detectDoublePipes` → `detectAdjacentPipes`. Diagnostic messages reframed from "phantom empty column" to
+  "valid GFM empty cell". All CLI modes (--check, --fix, --dry-run, --guard) pass through instead of blocking.
+  Diagnostics printed to stderr.
 - Move `table-double-pipe.md` from violations/ to current/ (renamed `table-empty-cells.md`).
 - Update `scripts/check-all.js`: remove `check-pipes` from expected violations for double-pipe fixture.
 - Clarify that fenced code block contents are ignored by table validation, table snapshots, pipe-safety checks, and
