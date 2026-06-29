@@ -326,8 +326,68 @@ function repairTableColumns(content) {
 }
 
 /**
- * Determine if the current args indicate a write mode (files will be modified).
+ * Repair adjacent-pipe patterns (||) in GFM table rows.
  *
+ * Per GFM §4.10, consecutive pipes (||) create valid empty cells. oxfmt cannot
+ * safely format tables with || because it expands column count and corrupts the
+ * entire table. This function replaces || with | | (space between pipes) in
+ * table rows, preserving the empty-cell semantics while producing a table that
+ * oxfmt can format safely.
+ *
+ * The repair respects escaped pipes and inline code spans, and ignores content
+ * inside fenced code blocks.
+ *
+ * @param {string} content File text.
+ * @returns {string} Repaired text, or original if no repairs needed.
+ */
+function repairAdjacentPipes(content) {
+  const issues = detectAdjacentPipes(content);
+  if (issues.length === 0) return content;
+
+  const lines = content.split("\n");
+  for (const issue of issues) {
+    const i = issue.lineIndex;
+    let result = "";
+    let escaped = false;
+    let codeSpanTicks = 0;
+
+    for (let pos = 0; pos < lines[i].length; pos++) {
+      const ch = lines[i][pos];
+      if (escaped) {
+        result += ch;
+        escaped = false;
+        continue;
+      }
+      if (ch === "\\") {
+        escaped = true;
+        result += ch;
+        continue;
+      }
+      if (ch === "`") {
+        let ticks = 1;
+        while (pos + 1 < lines[i].length && lines[i][pos + 1] === "`") {
+          ticks++;
+          pos++;
+        }
+        codeSpanTicks = codeSpanTicks === ticks ? 0 : (codeSpanTicks || ticks);
+        result += "`".repeat(ticks);
+        continue;
+      }
+      if (ch === "|" && pos + 1 < lines[i].length && lines[i][pos + 1] === "|" && codeSpanTicks === 0) {
+        result += "| |";
+        pos++; // skip the second pipe
+        continue;
+      }
+      result += ch;
+    }
+
+    lines[i] = result;
+  }
+  return lines.join("\n");
+}
+
+/**
+ * Determine if the current args indicate a write mode (files will be modified).
  * Write modes: --fix, --guard, or default (no explicit flag). All other flags
  * are read-only. Adding a new read-only flag requires adding it to READ_ONLY_FLAGS.
  *
@@ -403,25 +463,36 @@ function runStructuralValidation(filePath, includeFencesOnly = false) {
 }
 
 function processFile(filePath, args) {
-  // Block all modes on adjacent pipes — oxfmt cannot safely handle them.
+  const writeMode = isWriteMode(args);
+
+  // Read original content before any modifications
+  const originalContent = readFileSync(filePath, "utf8");
+
+  // Step 1: Adjacent pipe repair (write modes) or block (read-only modes)
   // Exception: --fences only validates code fences, not tables.
   if (!args.fences) {
-    const raw = readFileSync(filePath, "utf8");
-    const issues = detectAdjacentPipes(raw);
-    if (issues.length > 0) {
-      console.error(`Error: ${basename(filePath)} — adjacent pipes (||) would cause oxfmt table corruption.`);
-      issues.forEach(i => console.error(`  Line ${i.lineIndex + 1}: ${i.detail}`));
-      return false;
+    if (writeMode) {
+      const repaired = repairAdjacentPipes(originalContent);
+      if (repaired !== originalContent) {
+        writeFileSync(filePath, repaired);
+        console.error(`Repaired adjacent pipes in ${basename(filePath)}`);
+      }
+    } else {
+      const issues = detectAdjacentPipes(originalContent);
+      if (issues.length > 0) {
+        console.error(`Error: ${basename(filePath)} — adjacent pipes (||) would cause oxfmt table corruption.`);
+        issues.forEach(i => console.error(`  Line ${i.lineIndex + 1}: ${i.detail}`));
+        return false;
+      }
     }
   }
 
-  // Repair table column mismatches before any formatting or validation
-  // in write modes. This ensures oxfmt receives structurally valid tables.
-  const writeMode = isWriteMode(args);
-  const originalContent = writeMode ? readFileSync(filePath, "utf8") : null;
+  // Step 2: Repair table column mismatches before formatting in write modes.
+  // This ensures oxfmt receives structurally valid tables.
   if (writeMode) {
-    const repaired = repairTableColumns(originalContent);
-    if (repaired !== originalContent) {
+    const current = readFileSync(filePath, "utf8");
+    const repaired = repairTableColumns(current);
+    if (repaired !== current) {
       writeFileSync(filePath, repaired);
     }
   }
@@ -510,5 +581,6 @@ module.exports = {
   processFile,
   main,
   repairTableColumns,
+  repairAdjacentPipes,
   isWriteMode,
 };

@@ -104,12 +104,13 @@ formatting:
 - `check-fences.js` validates fence closure and accidental malformed info strings.
 - `check-structure.js` snapshots fences and tables before formatting, then compares them afterward.
 - `check-pipes.js` detects adjacent pipes (`||`) in table rows, which create valid empty cells per GFM §4.10. Since
-  `oxfmt` cannot safely format `||` tables, all CLI modes except `--fences` block before `oxfmt` is invoked: `--check`,
-  `--fix`, `--dry-run`, `--guard`, and `--validate` all exit 1 with a clear error.
+  `oxfmt` cannot safely format `||` tables, write modes (`--fix`, `--guard`, default) automatically repair them by
+  inserting a space between the pipes (`| |`), preserving the empty-cell semantics. Read-only modes (`--check`,
+  `--dry-run`, `--validate`) still block with a clear error before `oxfmt` is invoked.
 - Table validation, structural table snapshots, pipe-safety checks, and automatic table repair ignore table-shaped text
   inside fenced code blocks.
-- `--check`, `--fix`, `--dry-run`, `--guard`, and `--validate` run pipe-safety preflight before `oxfmt` and refuse to
-  proceed when adjacent pipes are detected.
+- `--check`, `--fix`, `--dry-run`, `--guard`, and `--validate` run pipe-safety preflight before `oxfmt`. Write modes
+  repair adjacent pipes automatically; read-only modes refuse to proceed when adjacent pipes are detected.
 - `--guard` restores the original file content if post-format structure changes.
 
 Fence policy is intentionally structural, not style-only. See the [shipped SKILL.md](skills/markdown-formatter/SKILL.md)
@@ -138,18 +139,18 @@ CLI itself does not require Hermes at runtime.
 
 ### Available flags
 
-| Flag              | Description                                                                 |
-| ----------------- | --------------------------------------------------------------------------- |
-| `--check`         | Check pipe safety and formatting without writing changes                    |
-| `--fix`           | Format files in-place after pipe-safety preflight; default behavior         |
-| `--all`           | Process directory inputs recursively; accepts multiple paths                |
-| `--guard`         | Enable structural pre/post guard; rolls back on drift and cleans snapshots  |
-| `--verify`        | Check formatting, idempotence, and structural integrity read-only           |
-| `--fences`        | Validate fence structure with `check-fences.js`                             |
-| `--validate`      | Run structural, fence, table, and pipe validations                          |
-| `--doctor`        | Check Node.js, Oxfmt, config, and payload readiness without modifying files |
-| `--dry-run`, `-n` | Run pipe-safety preflight, then show what would change without writing      |
-| `--help`, `-h`    | Display help message                                                        |
+| Flag              | Description                                                                                                                  |
+| ----------------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| `--check`         | Check pipe safety and formatting without writing changes                                                                     |
+| `--fix`           | Format files in-place after pipe-safety preflight; auto-repairs adjacent pipes and column-count mismatches; default behavior |
+| `--all`           | Process directory inputs recursively; accepts multiple paths                                                                 |
+| `--guard`         | Enable structural pre/post guard; rolls back on drift and cleans snapshots                                                   |
+| `--verify`        | Check formatting, idempotence, and structural integrity read-only                                                            |
+| `--fences`        | Validate fence structure with `check-fences.js`                                                                              |
+| `--validate`      | Run structural, fence, table, and pipe validations                                                                           |
+| `--doctor`        | Check Node.js, Oxfmt, config, and payload readiness without modifying files                                                  |
+| `--dry-run`, `-n` | Run pipe-safety preflight, then show what would change without writing                                                       |
+| `--help`, `-h`    | Display help message                                                                                                         |
 
 ## Install instructions
 

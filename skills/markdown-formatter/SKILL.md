@@ -54,7 +54,8 @@ Where `<skill-dir>` is the repository checkout (`skills/markdown-formatter/`) or
 ### Options
 
 - `--check`: Check pipe safety and formatting (read-only, exits with code 1 if unsafe or unformatted)
-- `--fix`: Format files in-place after pipe-safety preflight (default behavior)
+- `--fix`: Format files in-place after pipe-safety preflight; repairs adjacent pipes (`||`) and column-count mismatches
+  automatically (default behavior)
 - `--all`: Process directory inputs recursively; accepts multiple paths
 - `--guard`: Enable structural pre/post checks; rolls back file content on structural drift and cleans temporary
   snapshots
@@ -89,12 +90,13 @@ Table and pipe safety is enforced by guard scripts alongside the formatter:
 - `check-tables.js` validates GFM table column counts and pipe consistency.
 - `check-pipes.js` detects adjacent pipes (`||`) that create empty cells per GFM §4.10 — leading (empty first cell),
   internal (empty cell between columns), and trailing (empty trailing cell). Correctly ignores escaped pipes and inline
-  code spans. When invoked via the CLI (`--check`/`--fix`/`--dry-run`/`--guard`/`--validate`), adjacent pipes are a
-  blocking error — `oxfmt` cannot safely format `||` tables, so the CLI refuses before invoking it.
+  code spans. Write modes (`--fix`, `--guard`, default) automatically repair `||` by inserting a space (`| |`),
+  preserving empty-cell semantics while making the table oxfmt-compatible. Read-only modes (`--check`, `--dry-run`,
+  `--validate`) block before invoking oxfmt.
 - Table validation, structural table snapshots, pipe-safety checks, and automatic table repair ignore table-shaped text
   inside fenced code blocks.
-- `--check`, `--fix`, `--dry-run`, `--guard`, and `--validate` run pipe-safety preflight before invoking oxfmt so
-  adjacent-pipe violations block with a clear error before formatting begins.
+- `--check`, `--fix`, `--dry-run`, `--guard`, and `--validate` run pipe-safety preflight before invoking oxfmt. Write
+  modes repair adjacent pipes automatically; read-only modes refuse to proceed when adjacent pipes are detected.
 
 ## Supported file types
 

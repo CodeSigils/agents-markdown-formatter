@@ -311,3 +311,72 @@ describe('repairTableColumns', () => {
     assert.equal(cells[2], '', 'padded cell should be empty');
   });
 });
+
+describe('repairAdjacentPipes', () => {
+  const { repairAdjacentPipes } = require('../../skills/markdown-formatter/src/index.js');
+
+  it('returns original content when no adjacent pipes are present', () => {
+    const input = '# Hello\n\n| A | B |\n|---|---|\n| 1 | 2 |\n';
+    assert.equal(repairAdjacentPipes(input), input);
+  });
+
+  it('repairs leading adjacent pipes', () => {
+    const input = '|| A | B |\n|| :- | :- |\n|| 1 | 2 |\n';
+    const result = repairAdjacentPipes(input);
+    assert.match(result, /\| \| A \| B \|/);
+    assert.match(result, /\| \| :- \| :- \|/);
+    assert.match(result, /\| \| 1 \| 2 \|/);
+    assert.doesNotMatch(result, /\|\|/);
+  });
+
+  it('repairs internal adjacent pipes', () => {
+    const input = '| A || B |\n| :- || :- |\n| 1 || 2 |\n';
+    const result = repairAdjacentPipes(input);
+    assert.match(result, /\| A \| \| B \|/);
+    assert.doesNotMatch(result, /\|\|/);
+  });
+
+  it('repairs trailing adjacent pipes', () => {
+    const input = '| A | B ||\n| :- | :- ||\n| 1 | 2 ||\n';
+    const result = repairAdjacentPipes(input);
+    assert.match(result, /\| A \| B \| \|/);
+    assert.match(result, /\| :- \| :- \| \|/);
+    assert.match(result, /\| 1 \| 2 \| \|/);
+    assert.doesNotMatch(result, /\|\|/);
+  });
+
+  it('ignores adjacent pipes inside inline code spans', () => {
+    const input = '| `a || b` | c |\n|---|---|---|\n| x | y | z |\n';
+    const result = repairAdjacentPipes(input);
+    // The || inside backticks should remain
+    assert.match(result, /\| `a \|\| b` \| c \|/);
+  });
+
+  it('ignores content inside fenced code blocks', () => {
+    const input = '# Table\n\n```text\n|| A | B ||\n```\n\nReal table:\n\n| a | b |\n|---|---|\n';
+    const result = repairAdjacentPipes(input);
+    // Content inside fences should stay unchanged
+    assert.match(result, /\|\| A \| B \|\|/);
+  });
+
+  it('ignores escaped pipes', () => {
+    const input = '| A \\|\\| B | C |\n|---|---|---|\n| 1 | 2 | 3 |\n';
+    const result = repairAdjacentPipes(input);
+    // The \\|\\| should remain as escaped pipes
+    assert.match(result, /\| A \\\|\\\| B \| C \|/);
+  });
+
+  it('repairs all 3 patterns in a single table', () => {
+    const input = [
+      '|| Leading | Internal || Trailing ||',
+      '|| ------ | -------- || -------- ||',
+      '|| 1      | 2        || 3        ||',
+    ].join('\n');
+    const result = repairAdjacentPipes(input);
+    const lines = result.split('\n');
+    for (const line of lines) {
+      // Every || should become | |
+      assert.doesNotMatch(line, /(?<!\|)\|\|(?!\|)/, `line has unescaped adjacent pipes: "${line}"`);
+    }
+  });
+});

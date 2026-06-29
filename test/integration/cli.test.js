@@ -43,7 +43,7 @@ describe('markdown formatter CLI integration', () => {
     assert.match(result.stderr, /row 1 has 4 cols but header has 2|Table row/);
   });
 
-  it('--fix blocks double-pipe tables (adjacent pipes are a blocking error)', () => {
+  it('--fix repairs double-pipe tables (adjacent pipes converted to spaced pipes)', () => {
     const dir = mkdtempSync(join(tmpdir(), 'markdown-formatter-double-pipe-fix-'));
     const file = join(dir, 'double-pipe.md');
     try {
@@ -52,8 +52,13 @@ describe('markdown formatter CLI integration', () => {
 
       const result = runCli(['--fix', file]);
 
-      assert.notStrictEqual(result.status, 0, result.stdout + result.stderr);
-      assert.match(result.stdout + result.stderr, /adjacent pipes/);
+      assert.equal(result.status, 0, result.stdout + result.stderr);
+      assert.match(result.stdout + result.stderr, /Repaired adjacent pipes/);
+      const content = readFileSync(file, 'utf8');
+      // Leading || should become | |
+      assert.match(content, /\| \| A \| B \| \|/);
+      assert.match(content, /\| \| :- \| :- \| \|/);
+      assert.match(content, /\| \| 1 \| 2 \| \|/);
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }
