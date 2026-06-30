@@ -68,7 +68,8 @@ Core behavior:
   structural drift is detected.
 - `--verify` checks structure, formatting, and idempotence without modifying files.
 - `--validate` checks structure, fences, tables, and pipes without formatting.
-- `--check`, `--fix`, `--dry-run`, and `--guard` refuse adjacent-pipe table artifacts before invoking `oxfmt`.
+- `--check`, `--dry-run`, and `--validate` refuse adjacent-pipe table artifacts before invoking `oxfmt`. Write modes
+  (`--fix`, `--guard`, default) automatically repair them.
 - `--doctor` checks runtime prerequisites and payload completeness without modifying files.
 - The shipped skill payload has no npm runtime dependencies.
 
@@ -228,6 +229,7 @@ Reference fixtures and test organization:
 
 - `test/fixtures/current/` — Real-world docs that should format cleanly
 - `test/fixtures/oxfmt-spike/` — Oxfmt edge cases for fence behavior and table alignment
+- `test/fixtures/pipe-safety/` — Valid GFM that requires guard behavior (empty cells, oxfmt-unsafe tables)
 - `test/fixtures/violations/` — Structural violations the guard must detect
 - `test/unit/` — Isolated component tests for structure, fences, tables, and CLI helpers
 - `test/integration/` — CLI and pipeline end-to-end tests
