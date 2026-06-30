@@ -571,6 +571,11 @@ function processFile(filePath, args) {
     if (formatterUnsafeTableErrors.length > 0) {
       console.error(`Error: ${basename(filePath)} — inline-code pipes in tables would cause oxfmt table corruption.`);
       formatterUnsafeTableErrors.forEach((error) => console.error(`  ${error}`));
+      // Per GFM Example 200, | inside inline code IS a cell delimiter; oxfmt
+      // follows the spec and splits the row. We block here because the
+      // formatter cannot distinguish intentional | inside `code` from an
+      // accidental delimiter. The author must escape as \| to produce
+      // literal | inside inline code in a table cell.
       return false;
     }
 

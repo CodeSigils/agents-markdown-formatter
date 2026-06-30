@@ -4,6 +4,15 @@
  *
  * Snapshots and verifies fence and table structure to detect drift from formatting.
  *
+ * GFM spec references:
+ *   - Tables: https://github.github.io/gfm/#tables-extension-  (§4.10)
+ *     - Example 203: header and delimiter MUST have same column count
+ *     - Example 204: data row column count tracked for drift detection
+ *   - Fenced code blocks: https://github.github.io/gfm/#fenced-code-blocks-  (§4.7)
+ *     - Minimum fence length of 3; closer length must >= opener length
+ *     - Backtick fence info string must not contain backticks
+ *     - Closing fence must have no info string
+ *
  * Usage:
  *   node check-structure.js --snapshot <file>    Write structural snapshot
  *   node check-structure.js --check <file>     Compare against snapshot, exit 0 if unchanged

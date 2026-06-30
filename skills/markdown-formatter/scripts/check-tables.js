@@ -3,8 +3,18 @@
  * Formatter-safety table validator for markdown-formatter skill.
  * Enforces stable table column counts for oxfmt while ignoring escaped pipes and pipes in inline code spans.
  *
- * Note: GFM permits body rows with fewer or more cells than the header. This
- * checker is intentionally stricter for formatter safety.
+ * GFM spec: https://github.github.io/gfm/#tables-extension-  (§4.10)
+ *
+ * Spec rules enforced:
+ *   - Example 200: escaped pipes (\|) produce literal | in cell content
+ *   - Example 203: header and delimiter MUST have same cell count; mismatch means NOT a table
+ *   - Example 204: data rows may have fewer cells (empty inserted) or more (excess ignored)
+ *
+ * Note: This checker is stricter than GFM for formatter safety. GFM permits body
+ * rows with varying cell counts; we require all rows to match the header count.
+ *
+ * Deliberate spec deviation: splitTableCellsForStyle treats | inside inline code
+ * spans as content, not as cell delimiters. See that function for rationale.
  *
  * Usage: node check-tables.js <filePath...>
  * Exits 0 if all files are valid, 1 if violations are found.
@@ -15,6 +25,21 @@
 const fs = require("fs");
 const process = require("process");
 
+/**
+ * Split a GFM table row into cells, returning cell content strings.
+ *
+ * Per GFM §4.10, cell splitting happens before inline span parsing, so |
+ * inside inline code IS a cell delimiter. We deliberately deviate from the
+ * spec here by tracking backtick parity and not splitting inside code spans.
+ * This is safe because the column-count comparison this function serves is
+ * a formatter-safety preflight, not a spec-compliant parser. The actual
+ * inline-code pipe hazard that would corrupt oxfmt output is caught by
+ * tableRowHasInlineCodePipe() below (see Example 200).
+ *
+ * @param {string} line - A table row line
+ * @param {boolean} hasOuterPipes - Whether row has leading/trailing pipes
+ * @returns {string[]} Cell content strings
+ */
 function splitTableCellsForStyle(line, hasOuterPipes = true) {
   const trimmed = line.trim();
   const cells = [];
@@ -76,6 +101,26 @@ function isPotentialTableRow(line) {
   return splitTableCells(line).length > 1 || (trimmed.startsWith("|") && trimmed.endsWith("|") && pipeCount >= 2);
 }
 
+/**
+ * Check if a GFM table row has an unescaped | inside an inline code span.
+ *
+ * Per GFM Example 200, | inside inline code IS a cell delimiter — the spec
+ * requires \| to produce literal | even inside code spans. The formatter
+ * (oxfmt/Prettier, which delegates to cmark-gfm table parsing) follows the
+ * spec, so an unescaped | inside `` `code` `` splits the row and corrupts
+ * the table. This preflight catches the case before oxfmt runs.
+ *
+ * Confirmed empirically against GitHub's Markdown API
+ * (api.github.com/markdown, mode=gfm): input table row
+ *   `` | `cat a | grep b` | desc | ``
+ * renders as two cells (`` `cat a ``, `` grep b` ``), not one.
+ *
+ * See also: splitTableCellsForStyle which deliberately does NOT split on
+ * these pipes for column-count comparison (different purpose).
+ *
+ * @param {string} line - A table row line
+ * @returns {boolean} True if a pipe appears inside backticks
+ */
 function tableRowHasInlineCodePipe(line) {
   let escaped = false;
   let codeSpanTicks = 0;
@@ -136,6 +181,19 @@ function getFenceBoundary(line, currentFence = null) {
   return closerPattern.test(line) ? false : currentFence;
 }
 
+/**
+ * Validate GFM table structure for formatter safety.
+ *
+ * Enforces these GFM rules:
+ *   - Example 203: header and delimiter MUST have same column count
+ *   - Example 204: data rows are expected to match header (formatter-safety strict variant)
+ *   - Example 200: escaped pipes and inline-code pipes are flagged as formatter hazards
+ *
+ * Also runs inline-code pipe preflight for rows that would be split by oxfmt.
+ *
+ * @param {string} content - File text
+ * @returns {string[]} Error messages (empty = valid)
+ */
 function validateTables(content) {
   const errors = [];
   const lines = content.split("\n");

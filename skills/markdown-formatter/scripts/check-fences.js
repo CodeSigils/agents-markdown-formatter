@@ -1,7 +1,17 @@
 #!/usr/bin/env node
 /**
  * Fenced code block validator for markdown-formatter skill.
- * Validates fenced code block structure according to GFM-style fence policy.
+ * Validates fenced code block structure according to GFM §4.7.
+ *
+ * GFM spec: https://github.github.io/gfm/#fenced-code-blocks-
+ *
+ * Key rules from §4.7:
+ *   - Fence must be at least 3 characters long (backtick ` or tilde ~)
+ *   - Closing fence length must match or exceed opener length
+ *   - Info string after opening fence must not contain backticks (backtick fences only)
+ *   - Common Markdown convention: info string should not start with whitespace
+ *   - Indentation: 0-3 spaces allowed before opening fence
+ *   - Closing fence must have no info string
  *
  * Usage: node check-fences.js <filePath...>
  *
