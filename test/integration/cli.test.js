@@ -332,4 +332,54 @@ describe('markdown formatter CLI integration', () => {
       rmSync(dir, { recursive: true, force: true });
     }
   });
+
+  it('--fences detects fence info string violations', () => {
+    const result = runCli(['--fences', 'test/fixtures/violations/fence-mismatch.md']);
+
+    assert.notStrictEqual(result.status, 0);
+    assert.match(result.stdout + result.stderr, /unclosed|mismatch|empty|whitespace/i);
+  });
+
+  it('--fences allows clean fence content', () => {
+    const result = runCli(['--fences', 'test/fixtures/current/kitchensink.md']);
+
+    assert.equal(result.status, 0, result.stdout + result.stderr);
+  });
+
+  it('--validate warns and --check gates on file with unclosed fence', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'markdown-formatter-unclosed-fence-'));
+    const file = join(dir, 'unclosed.md');
+    try {
+      const content = '# Unclosed fence test\n\n```js\nconst x = 1;\n';
+      writeFileSync(file, content);
+
+      // --validate should report the unclosed fence
+      const validateResult = runCli(['--validate', file]);
+      assert.notStrictEqual(validateResult.status, 0);
+      assert.match(validateResult.stdout + validateResult.stderr, /Unclosed fence/);
+
+      // --fix should still format around unclosed fences (fence check is separate)
+      const fixResult = runCli(['--fix', file]);
+      assert.equal(fixResult.status, 0, fixResult.stdout + fixResult.stderr);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it('--validate warns on long fence containing GFM table structure', () => {
+    const content = '```\n' + Array(42).fill('line content').join('\n') + '\n| Name | Value |\n| ---- | ----- |\n| A | B |\n```\n';
+    const dir = mkdtempSync(join(tmpdir(), 'markdown-formatter-long-fence-'));
+    const file = join(dir, 'long-fence.md');
+    try {
+      writeFileSync(file, content);
+
+      const result = runCli(['--validate', file]);
+
+      assert.notStrictEqual(result.status, 0);
+      assert.match(result.stdout + result.stderr, /Warning: fence at line \d+ spans/);
+      assert.match(result.stdout + result.stderr, /contains GFM table structure/);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
 });

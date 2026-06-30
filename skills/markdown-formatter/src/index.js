@@ -26,8 +26,9 @@ const { readdirSync, statSync, existsSync, readFileSync, writeFileSync, copyFile
 const { join, resolve, extname, basename } = require("path");
 const { tmpdir } = require("os");
 
-const { splitTableCells, splitTableCellsForStyle, isPotentialTableRow, isDelimiterLine, getFenceBoundary, validateTables } = require('../scripts/check-tables.js');
+const { splitTableCells, splitTableCellsForStyle, isPotentialTableRow, isDelimiterLine, getFenceBoundary, hasUnclosedFence, validateTables } = require('../scripts/check-tables.js');
 const { detectAdjacentPipes } = require('../scripts/check-pipes.js');
+const { validateFences } = require('../scripts/check-fences.js');
 
 const SKILL_DIR = resolve(__dirname, "..");
 const OXFMT_CONFIG = join(SKILL_DIR, ".oxfmtrc.json");
@@ -562,11 +563,21 @@ function processFile(filePath, args) {
 
   // Read original content before any modifications
   const originalContent = readFileSync(filePath, "utf8");
+
+  // Prelight: unclosed fences blind the shared getFenceBoundary state
+  // machine used by check-tables.js, check-pipes.js, and
+  // check-structure.js's extractTables. All three will silently skip
+  // everything after the unclosed opener. Detect it early and gate
+  // table/pipe checks so the user doesn't get misleading results.
+  const isFenceOnly = args.fences;
+  const unclosedFenceExists = !isFenceOnly && hasUnclosedFence(originalContent);
+
   let repairedContent = originalContent;  // tracks content after repairs, before oxfmt
 
   // Step 1: Adjacent pipe repair (write modes) or block (read-only modes)
   // Exception: --fences only validates code fences, not tables.
-  if (!args.fences) {
+  // Also skip when an unclosed fence blinds the shared tracker.
+  if (!isFenceOnly && !unclosedFenceExists) {
     const formatterUnsafeTableErrors = validateTables(originalContent).filter((error) => error.includes("inline code span contains unescaped pipe"));
     if (formatterUnsafeTableErrors.length > 0) {
       console.error(`Error: ${basename(filePath)} — inline-code pipes in tables would cause oxfmt table corruption.`);
@@ -597,14 +608,33 @@ function processFile(filePath, args) {
   }
 
   // Step 2: Repair table column mismatches before formatting in write modes.
-  // This ensures oxfmt receives formatter-safe tables.
-  if (writeMode) {
+  // Skip when an unclosed fence blinds the table tracker.
+  if (writeMode && !unclosedFenceExists) {
     const current = readFileSync(filePath, "utf8");
     const repaired = repairTableColumns(current);
     if (repaired !== current) {
       writeFileSync(filePath, repaired);
       repairedContent = repaired;
     }
+  }
+
+  if (unclosedFenceExists) {
+    console.error(
+      `Warning: ${basename(filePath)} — unclosed fence blocks table/pipe tracking. ` +
+      `Table and pipe checks are unreliable (shared fence tracker blinds ` +
+      `all downstream content). Run --fences to locate the unclosed fence.`
+    );
+    // Still run fence validation and formatting, but skip table/pipe checks.
+    if (args.fences) return runStructuralValidation(filePath, true);
+    if (args.validate) return runScript("check-structure.js", "--verify", filePath) && runScript("check-fences.js", filePath);
+    if (args.verify) return runScript("check-structure.js", "--verify", filePath) && runScript("check-fences.js", filePath) && runOxfmt(["--check", filePath]) && checkIdempotenceReadOnly(filePath);
+    if (args.guard) {
+      if (args.check) return runScript("check-structure.js", "--verify", filePath) && runScript("check-fences.js", filePath) && runOxfmt(["--check", filePath]);
+      // --guard + --fix: skip structural snapshot (tables unreliable), still format
+      return runOxfmt(["--write", filePath]) && checkIdempotenceReadOnly(filePath);
+    }
+    if (args.check) return runOxfmt(["--check", filePath]);
+    return runOxfmt(["--write", filePath]) && checkIdempotenceReadOnly(filePath);
   }
 
   if (args.fences) return runStructuralValidation(filePath, true);

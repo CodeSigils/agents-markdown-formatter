@@ -5,6 +5,7 @@ const {
   splitTableCellsForStyle,
   isDelimiterLine,
   validateTables,
+  hasUnclosedFence,
 } = require('../../skills/markdown-formatter/scripts/check-tables.js');
 
 describe('check-tables.js unit tests', () => {
@@ -85,5 +86,16 @@ describe('check-tables.js unit tests', () => {
     ].join('\n');
 
     assert.deepStrictEqual(validateTables(content), []);
+  });
+
+  it('hasUnclosedFence detects unclosed fence at EOF', () => {
+    assert.equal(hasUnclosedFence('```js\nconst x = 1;\n'), true);
+    assert.equal(hasUnclosedFence('````markdown\n```text\nnested\n```\n'), true);
+  });
+
+  it('hasUnclosedFence returns false when all fences are closed', () => {
+    assert.equal(hasUnclosedFence('```js\nconst x = 1;\n```\n'), false);
+    assert.equal(hasUnclosedFence(''), false);
+    assert.equal(hasUnclosedFence('# No code blocks here'), false);
   });
 });

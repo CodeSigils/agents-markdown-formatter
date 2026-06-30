@@ -34,7 +34,8 @@ function extractFences(content) {
   const lines = content.split("\n");
   let current = null;
 
-  for (const line of lines) {
+  for (let lineIdx = 0; lineIdx < lines.length; lineIdx++) {
+    const line = lines[lineIdx];
     if (!current) {
       const opener = line.match(/^( {0,3})(`{3,}|~{3,})([^\n]*)$/);
       if (opener) {
@@ -44,6 +45,7 @@ function extractFences(content) {
           length: opener[2].length,
           style: opener[2][0],
           info: opener[3] || "",
+          openLine: lineIdx,
         };
       }
       continue;
@@ -57,6 +59,8 @@ function extractFences(content) {
         style: current.style,
         info: current.info,
         closer: current.opener,
+        openLine: current.openLine,
+        closeLine: lineIdx,
       });
       current = null;
     }
@@ -69,6 +73,8 @@ function extractFences(content) {
       style: current.style,
       info: current.info,
       closer: null,
+      openLine: current.openLine,
+      closeLine: lines.length - 1,
     });
   }
 
@@ -130,6 +136,7 @@ function buildSnapshot(content) {
 }
 
 function validateStructure(content) {
+  const lines = content.split("\n");
   const fences = extractFences(content);
   const tables = extractTables(content);
   const errors = [];
@@ -137,6 +144,35 @@ function validateStructure(content) {
     if (!fence.closer) errors.push(`Unclosed fence: ${fence.opener}`);
     if (fence.info.length > 0 && fence.info.trim() === "") errors.push(`Empty language tag on fence opener: ${fence.opener} `);
     if (fence.style === "`" && fence.info.includes("`")) errors.push(`Backtick fence info string contains backtick: ${fence.opener}${fence.info}`);
+
+    // Heuristic: a closed fence that spans many lines with actual GFM table
+    // structure inside may be accidental — the closer at the end may belong
+    // to a different fence, and the shared getFenceBoundary tracker treats
+    // the whole span as a single fence, blinding table/pipe checks.
+    // Threshold: 40 lines (legitimate code examples rarely exceed this).
+    if (fence.closer && fence.closeLine - fence.openLine > 40) {
+      const fenceLines = lines.slice(fence.openLine, fence.closeLine + 1);
+      // Check if extractTables found a table inside this fence by scanning
+      // for header+delimiter pairs. If so, the fence likely swallows
+      // content intended as markdown, not code.
+      for (let li = 0; li < fenceLines.length - 1; li++) {
+        const line = fenceLines[li];
+        const nextLine = fenceLines[li + 1];
+        if (line && nextLine && isPotentialTableRow(line) && isDelimiterLine(nextLine)) {
+          const headerCols = splitTableCells(line).length;
+          const delimiterCols = splitTableCells(nextLine).length;
+          const colMismatch = headerCols !== delimiterCols
+            ? ` (column mismatch: header ${headerCols} vs delimiter ${delimiterCols})`
+            : "";
+          errors.push(
+            `Warning: fence at line ${fence.openLine + 1} spans ${fence.closeLine - fence.openLine + 1} lines ` +
+            `(opener \`${fence.opener}\`) and contains GFM table structure at line ${fence.openLine + li + 1}.` +
+            colMismatch + ` The closer at line ${fence.closeLine + 1} may belong to a different fence.`
+          );
+          break;
+        }
+      }
+    }
   }
   for (const table of tables) {
     if (table.header.colCount !== table.delimiter.colCount) errors.push(`Table column mismatch: header ${table.header.colCount} vs delimiter ${table.delimiter.colCount}`);

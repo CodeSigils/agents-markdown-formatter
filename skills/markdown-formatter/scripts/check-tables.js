@@ -182,6 +182,29 @@ function getFenceBoundary(line, currentFence = null) {
 }
 
 /**
+ * Process content line-by-line with the shared getFenceBoundary state machine
+ * and report whether any fence is still open at EOF.
+ *
+ * Callers (CLI, check-pipes.js, check-structure.js) use this to determine
+ * whether table/pipe checks are reliable: an unclosed fence blinds the shared
+ * tracker, causing all subsequent lines to be treated as inside a code block.
+ *
+ * @param {string} content - File text
+ * @returns {boolean} True if a fence opener was found without a matching closer
+ */
+function hasUnclosedFence(content) {
+  const lines = content.split("\n");
+  let currentFence = null;
+  for (let i = 0; i < lines.length; i++) {
+    const fenceBoundary = getFenceBoundary(lines[i], currentFence);
+    if (fenceBoundary !== null) {
+      currentFence = fenceBoundary || null;
+    }
+  }
+  return currentFence !== null;
+}
+
+/**
  * Validate GFM table structure for formatter safety.
  *
  * Enforces these GFM rules:
@@ -276,6 +299,7 @@ module.exports = {
   tableRowHasInlineCodePipe,
   isDelimiterLine,
   getFenceBoundary,
+  hasUnclosedFence,
   validateTables,
   validateFile,
   main,

@@ -21,14 +21,18 @@ describe('check-structure.js unit tests', () => {
         length: 3,
         style: '`',
         info: 'js',
-        closer: '```'
+        closer: '```',
+        openLine: 0,
+        closeLine: 2
       });
       assert.deepStrictEqual(fences[1], {
         opener: '~~~',
         length: 3,
         style: '~',
         info: 'python',
-        closer: '~~~'
+        closer: '~~~',
+        openLine: 6,
+        closeLine: 8
       });
     });
 
@@ -42,7 +46,9 @@ describe('check-structure.js unit tests', () => {
         length: 3,
         style: '`',
         info: 'js',
-        closer: null
+        closer: null,
+        openLine: 0,
+        closeLine: 1
       });
     });
 
@@ -196,6 +202,44 @@ describe('check-structure.js unit tests', () => {
       const hasTableMismatch = errors.some(e => e.includes('Table column mismatch') || e.includes('Table row'));
       assert.strictEqual(hasUnclosedFence, true);
       assert.strictEqual(hasTableMismatch, false);
+    });
+
+    it('should warn on long fence containing GFM table structure', async () => {
+      // Build a 42-line fence (above 40-line threshold) with a GFM table inside
+      const lines = ['```'];
+      for (let i = 0; i < 40; i++) {
+        lines.push(`line ${i + 1}`);
+      }
+      lines.push('| Name | Value |');
+      lines.push('| ---- | ----- |');
+      lines.push('| A | B |');
+      lines.push('```');
+      const content = lines.join('\n');
+      const errors = validateStructure(content);
+
+      assert.strictEqual(errors.length >= 1, true);
+      const heuristicWarning = errors.find(e => e.startsWith('Warning: fence at line'));
+      assert.notStrictEqual(heuristicWarning, undefined);
+      assert.match(heuristicWarning, /spans \d+ lines/);
+      assert.match(heuristicWarning, /contains GFM table structure/);
+      assert.match(heuristicWarning, /closer at line/);
+    });
+
+    it('should not warn on short fence containing GFM table structure', async () => {
+      // 24-line fence (below 40-line threshold) should NOT trigger the heuristic
+      const lines = ['```'];
+      for (let i = 0; i < 22; i++) {
+        lines.push(`line ${i + 1}`);
+      }
+      lines.push('| Name | Value |');
+      lines.push('| ---- | ----- |');
+      lines.push('| A | B |');
+      lines.push('```');
+      const content = lines.join('\n');
+      const errors = validateStructure(content);
+
+      const heuristicWarning = errors.find(e => e.startsWith('Warning: fence at line'));
+      assert.strictEqual(heuristicWarning, undefined);
     });
   });
 
