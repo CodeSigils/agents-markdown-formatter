@@ -14,6 +14,8 @@
  *   --validate   Run all structural validations
  *   --doctor     Check runtime prerequisites without modifying files
  *   --dry-run    Run pipe-safety preflight, then preview changes
+ *   --audit-tables  Print table row cell counts and pipe hazards without writing
+ *   --no-repair  In write modes, report repairable table issues instead of modifying them
  *   --help       Show this help
  *
  * Prerequisites: oxfmt on PATH or in node_modules/.bin/
@@ -26,7 +28,7 @@ const { readdirSync, statSync, existsSync, readFileSync, writeFileSync, copyFile
 const { join, resolve, extname, basename } = require("path");
 const { tmpdir } = require("os");
 
-const { splitTableCells, splitTableCellsForStyle, isPotentialTableRow, isDelimiterLine, getFenceBoundary, hasUnclosedFence, validateTables } = require('../scripts/check-tables.js');
+const { splitTableCells, splitTableCellsForStyle, isPotentialTableRow, isDelimiterLine, getFenceBoundary, hasUnclosedFence, tableRowHasInlineCodePipe, validateTables } = require('../scripts/check-tables.js');
 const { detectAdjacentPipes } = require('../scripts/check-pipes.js');
 const { validateFences } = require('../scripts/check-fences.js');
 
@@ -34,13 +36,13 @@ const SKILL_DIR = resolve(__dirname, "..");
 const OXFMT_CONFIG = join(SKILL_DIR, ".oxfmtrc.json");
 const NODE_RUNTIME_MIN_VERSION = 20;
 const OXFMT_MAX_VERSION = "0.56.0";
-const LONG_FLAGS = new Set(["check", "fix", "all", "guard", "verify", "fences", "validate", "doctor", "dry-run", "help"]);
+const LONG_FLAGS = new Set(["check", "fix", "all", "guard", "verify", "fences", "validate", "doctor", "dry-run", "audit-tables", "no-repair", "help"]);
 const SHORT_FLAGS = { h: "help", n: "dry-run" };
-const READ_ONLY_FLAGS = new Set(["check", "validate", "fences", "verify", "doctor", "help", "dry-run"]);
+const READ_ONLY_FLAGS = new Set(["check", "validate", "fences", "verify", "doctor", "help", "dry-run", "audit-tables"]);
 const MARKDOWN_EXTENSIONS = new Set([".md", ".markdown", ".mdx"]);
 
 function parseArgs(argv) {
-  const args = { _: [], check: false, fix: false, all: false, guard: false, verify: false, fences: false, validate: false, doctor: false, "dry-run": false, help: false };
+  const args = { _: [], check: false, fix: false, all: false, guard: false, verify: false, fences: false, validate: false, doctor: false, "dry-run": false, "audit-tables": false, "no-repair": false, help: false };
 
   for (let i = 2; i < argv.length; i++) {
     const arg = argv[i];
@@ -77,6 +79,8 @@ Options:
   --validate        Run all structural validations
   --doctor          Check runtime prerequisites without modifying files
   --dry-run, -n     Run pipe-safety preflight, then preview changes
+  --audit-tables    Print table row cell counts and pipe hazards without writing
+  --no-repair       In write modes, report repairable table issues instead of modifying them
   --help, -h        Show this help
 
 Prerequisites: oxfmt on PATH or in node_modules/.bin/
@@ -482,6 +486,44 @@ function hasTableWithEmptyCells(content) {
   return false;
 }
 
+function auditTables(content, label = "<input>") {
+  const lines = content.split("\n");
+  const output = [`Table audit: ${label}`];
+  let currentFence = null;
+  let tableCount = 0;
+
+  for (let i = 0; i < lines.length - 1; i++) {
+    const fenceBoundary = getFenceBoundary(lines[i], currentFence);
+    if (fenceBoundary !== null) {
+      currentFence = fenceBoundary || null;
+      continue;
+    }
+    if (currentFence) continue;
+
+    if (!isPotentialTableRow(lines[i]) || !isDelimiterLine(lines[i + 1])) continue;
+
+    tableCount++;
+    const headerCols = splitTableCells(lines[i]).length;
+    const delimiterCols = splitTableCells(lines[i + 1]).length;
+    output.push(`line ${i + 1}: table start header-cells=${headerCols} delimiter-cells=${delimiterCols}`);
+
+    for (let j = i; j < lines.length && isPotentialTableRow(lines[j]); j++) {
+      if (j > i + 1 && isDelimiterLine(lines[j])) break;
+      const cells = splitTableCells(lines[j]);
+      const hazards = [];
+      const adjacent = detectAdjacentPipes(lines[j]);
+      if (adjacent.length > 0) hazards.push("adjacent-pipes");
+      if (tableRowHasInlineCodePipe(lines[j])) hazards.push("inline-code-pipe");
+      if (cells.length !== headerCols) hazards.push(`column-drift:${cells.length}->${headerCols}`);
+      if (cells.some((cell) => cell.trim() === "")) hazards.push("empty-cell");
+      output.push(`line ${j + 1}: cells=${cells.length} hazards=${hazards.length ? hazards.join(",") : "none"} | ${lines[j]}`);
+    }
+  }
+
+  if (tableCount === 0) output.push("no tables found");
+  return output.join("\n");
+}
+
 /**
  * Determine if the current args indicate a write mode (files will be modified).
  * Write modes: --fix, --guard, or default (no explicit flag). All other flags
@@ -564,7 +606,7 @@ function processFile(filePath, args) {
   // Read original content before any modifications
   const originalContent = readFileSync(filePath, "utf8");
 
-  // Prelight: unclosed fences blind the shared getFenceBoundary state
+  // Preflight: unclosed fences blind the shared getFenceBoundary state
   // machine used by check-tables.js, check-pipes.js, and
   // check-structure.js's extractTables. All three will silently skip
   // everything after the unclosed opener. Detect it early and gate
@@ -573,6 +615,11 @@ function processFile(filePath, args) {
   const unclosedFenceExists = !isFenceOnly && hasUnclosedFence(originalContent);
 
   let repairedContent = originalContent;  // tracks content after repairs, before oxfmt
+
+  if (args["audit-tables"]) {
+    console.log(auditTables(originalContent, filePath));
+    return true;
+  }
 
   // Step 1: Adjacent pipe repair (write modes) or block (read-only modes)
   // Exception: --fences only validates code fences, not tables.
@@ -591,6 +638,12 @@ function processFile(filePath, args) {
     }
 
     if (writeMode) {
+      const adjacentPipeIssues = detectAdjacentPipes(originalContent);
+      if (args["no-repair"] && adjacentPipeIssues.length > 0) {
+        console.error(`Error: ${basename(filePath)} — no-repair mode found adjacent pipes (||); refusing automatic table repair.`);
+        adjacentPipeIssues.forEach(i => console.error(`  Line ${i.lineIndex + 1}: ${i.detail}`));
+        return false;
+      }
       const repaired = repairAdjacentPipes(originalContent);
       if (repaired !== originalContent) {
         writeFileSync(filePath, repaired);
@@ -612,6 +665,10 @@ function processFile(filePath, args) {
   if (writeMode && !unclosedFenceExists) {
     const current = readFileSync(filePath, "utf8");
     const repaired = repairTableColumns(current);
+    if (args["no-repair"] && repaired !== current) {
+      console.error(`Error: ${basename(filePath)} — no-repair mode found table column drift; refusing automatic column repair.`);
+      return false;
+    }
     if (repaired !== current) {
       writeFileSync(filePath, repaired);
       repairedContent = repaired;
@@ -752,6 +809,7 @@ module.exports = {
   repairTableColumns,
   repairAdjacentPipes,
   normalizeTableSpacing,
+  auditTables,
   hasTableWithEmptyCells,
   isWriteMode,
 };

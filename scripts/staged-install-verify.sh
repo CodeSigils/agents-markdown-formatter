@@ -125,6 +125,8 @@ trap 'rm -rf "$FIXTURE_DIR"' EXIT
 VALID_FIXTURE="${FIXTURE_DIR}/valid.md"
 GUARD_FIXTURE="${FIXTURE_DIR}/guard.md"
 DOUBLE_PIPE_FIXTURE="${FIXTURE_DIR}/double-pipe.md"
+NO_REPAIR_FIXTURE="${FIXTURE_DIR}/no-repair.md"
+AUDIT_FIXTURE="${FIXTURE_DIR}/audit.md"
 INLINE_PIPE_FIXTURE="${FIXTURE_DIR}/inline-pipe.md"
 cat > "$VALID_FIXTURE" <<'EOF'
 # Staged Fixture
@@ -144,6 +146,15 @@ cat > "$DOUBLE_PIPE_FIXTURE" <<'EOF'
 || A | B ||
 || --- | --- ||
 || 1 | 2 ||
+EOF
+cp "$DOUBLE_PIPE_FIXTURE" "$NO_REPAIR_FIXTURE"
+cat > "$AUDIT_FIXTURE" <<'EOF'
+# Audit Fixture
+
+| Command | Description |
+| --- | --- |
+| `cat access.log | grep 500` | Pipeline example |
+| value ||
 EOF
 cat > "$INLINE_PIPE_FIXTURE" <<'EOF'
 # Inline Pipe Fixture
@@ -198,6 +209,38 @@ fi
 if ! grep -qi -e "Repaired adjacent pipes" "$FIXTURE_DIR/double-pipe.out"; then
     echo "❌ FAILED: Staged --fix repaired but did not report repair" >&2
     cat "$FIXTURE_DIR/double-pipe.out" >&2
+    exit 1
+fi
+
+ORIGINAL_NO_REPAIR_CONTENT="$(cat "$NO_REPAIR_FIXTURE")"
+if ./skills/markdown-formatter/src/index.js --fix --no-repair "$NO_REPAIR_FIXTURE" > "$FIXTURE_DIR/no-repair.out" 2>&1; then
+    echo "❌ FAILED: Staged --no-repair should block adjacent-pipe auto-repair" >&2
+    cat "$FIXTURE_DIR/no-repair.out" >&2
+    exit 1
+fi
+if ! grep -qi -e "no-repair" -e "adjacent pipes" "$FIXTURE_DIR/no-repair.out"; then
+    echo "❌ FAILED: Staged --no-repair blocked without clear diagnostic" >&2
+    cat "$FIXTURE_DIR/no-repair.out" >&2
+    exit 1
+fi
+if [[ "$(cat "$NO_REPAIR_FIXTURE")" != "$ORIGINAL_NO_REPAIR_CONTENT" ]]; then
+    echo "❌ FAILED: Staged --no-repair mutated the fixture" >&2
+    exit 1
+fi
+echo "✓ Staged --no-repair blocks table auto-repair without mutation"
+
+if ./skills/markdown-formatter/src/index.js --audit-tables "$AUDIT_FIXTURE" > "$FIXTURE_DIR/audit.out" 2>&1; then
+    echo "✓ Staged --audit-tables succeeded"
+else
+    echo "❌ FAILED: Staged --audit-tables failed" >&2
+    cat "$FIXTURE_DIR/audit.out" >&2
+    exit 1
+fi
+if ! grep -qi "Table audit:" "$FIXTURE_DIR/audit.out" || \
+   ! grep -qi "inline-code-pipe" "$FIXTURE_DIR/audit.out" || \
+   ! grep -qi "adjacent-pipes" "$FIXTURE_DIR/audit.out"; then
+    echo "❌ FAILED: Staged --audit-tables missed expected diagnostics" >&2
+    cat "$FIXTURE_DIR/audit.out" >&2
     exit 1
 fi
 

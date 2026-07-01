@@ -102,6 +102,60 @@ describe('markdown formatter CLI integration', () => {
     }
   });
 
+  it('--no-repair blocks write-mode pipe repairs and preserves original content', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'markdown-formatter-no-repair-'));
+    const file = join(dir, 'double-pipe.md');
+    try {
+      const original = '# Double pipe\n\n|| A | B ||\n|| :- | :- ||\n|| 1 | 2 ||\n';
+      writeFileSync(file, original);
+
+      const result = runCli(['--fix', '--no-repair', file]);
+
+      assert.notStrictEqual(result.status, 0, result.stdout + result.stderr);
+      assert.match(result.stdout + result.stderr, /no-repair/);
+      assert.match(result.stdout + result.stderr, /adjacent pipes/);
+      assert.equal(readFileSync(file, 'utf8'), original);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it('--audit-tables reports row cell counts and hazards without writing', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'markdown-formatter-audit-tables-'));
+    const file = join(dir, 'audit.md');
+    try {
+      const original = [
+        '# Audit',
+        '',
+        '| Command | Notes |',
+        '| --- | --- |',
+        '| `cat a | grep b` | pipeline |',
+        '| value ||',
+        '',
+      ].join('\n');
+      writeFileSync(file, original);
+
+      const result = runCli(['--audit-tables', file]);
+
+      assert.equal(result.status, 0, result.stdout + result.stderr);
+      assert.match(result.stdout, /Table audit: .*audit\.md/);
+      assert.match(result.stdout, /line 3: table start/);
+      assert.match(result.stdout, /line 5: cells=2 .*inline-code-pipe/);
+      assert.match(result.stdout, /line 6: cells=2 .*adjacent-pipes/);
+      assert.equal(readFileSync(file, 'utf8'), original);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it('--help documents table audit and no-repair debugging flags', () => {
+    const result = runCli(['--help']);
+
+    assert.equal(result.status, 0);
+    assert.match(result.stdout, /--audit-tables/);
+    assert.match(result.stdout, /--no-repair/);
+  });
+
   it('--fix --dry-run does not repair-write malformed tables', () => {
     const dir = mkdtempSync(join(tmpdir(), 'markdown-formatter-fix-dry-run-'));
     const file = join(dir, 'repairable.md');

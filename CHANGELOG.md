@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Add table-edit debugging support: `--audit-tables` prints per-row cell counts and hazards without writing, and
+  `--no-repair` makes write modes report adjacent-pipe/column repairs instead of mutating files. This gives agents a
+  read-only way to investigate whether bad `|`/`||` table structure came from generation or from formatter repair.
+- Fix user-facing wording typo: `prelight` → `preflight` in README and shipped SKILL.md.
 - Add `hasUnclosedFence()` to `check-tables.js`: EOF-aware fence tracker that gates table/pipe checks when an unclosed
   fence blinds the shared `getFenceBoundary` state machine. All CLI modes now detect unclosed fences early, produce a
   warning suggesting `--fences` to locate the opener, and proceed with fence validation and formatting while skipping

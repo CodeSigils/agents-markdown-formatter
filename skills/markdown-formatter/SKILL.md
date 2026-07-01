@@ -64,6 +64,8 @@ Where `<skill-dir>` is the repository checkout (`skills/markdown-formatter/`) or
 - `--validate`: Run structural, fence, table, and pipe validations
 - `--doctor`: Check Node.js, Oxfmt, config, and payload readiness without modifying files
 - `--dry-run`, `-n`: Run pipe-safety preflight, then show what would be changed without writing files
+- `--audit-tables`: Print table row cell counts and pipe hazards without writing; use before/after agent table edits
+- `--no-repair`: In write modes, report repairable table issues instead of modifying them
 - `--help`, `-h`: Display help message
 
 ## Prerequisites
@@ -102,7 +104,7 @@ Table and pipe safety is enforced by guard scripts alongside the formatter:
   inside fenced code blocks.
 - `--check`, `--fix`, `--dry-run`, `--guard`, and `--validate` run pipe-safety preflight before invoking oxfmt. Write
   modes repair adjacent pipes automatically; read-only modes refuse to proceed when adjacent pipes are detected.
-- **Unclosed-fence prelight gate.** All CLI modes detect unclosed fences via `hasUnclosedFence()` before running
+- **Unclosed-fence preflight gate.** All CLI modes detect unclosed fences via `hasUnclosedFence()` before running
   table/pipe checks. When an unclosed fence is found, the CLI warns that table and pipe checks are unreliable (the
   shared fence tracker treats all content after the opener as inside a code block) and skips them, while continuing with
   fence validation and formatting. Run `--fences` to locate the unclosed fence opener.

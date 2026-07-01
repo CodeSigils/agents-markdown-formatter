@@ -13,6 +13,7 @@ const {
   getSpawnOptions,
   resolveInputFiles,
   repairTableColumns,
+  auditTables,
   hasTableWithEmptyCells,
 } = require('../../skills/markdown-formatter/src/index.js');
 
@@ -165,6 +166,22 @@ describe('formatter CLI helper unit tests', () => {
     } finally {
       rmSync(root, { recursive: true, force: true });
     }
+  });
+
+  it('audits table rows with cell counts and pipe hazards without mutating content', () => {
+    const input = [
+      '| Command | Notes |',
+      '| --- | --- |',
+      '| `cat a | grep b` | pipeline |',
+      '| value ||',
+    ].join('\n');
+
+    const report = auditTables(input, 'probe.md');
+
+    assert.match(report, /Table audit: probe\.md/);
+    assert.match(report, /line 1: table start/);
+    assert.match(report, /line 3: cells=2 .*inline-code-pipe/);
+    assert.match(report, /line 4: cells=2 .*adjacent-pipes/);
   });
 });
 
