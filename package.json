@@ -1,23 +1,20 @@
 {
   "name": "agents-markdown-formatter",
   "version": "1.1.0",
-  "description": "AI-agent-safe GFM and MDX Markdown formatter powered by Oxc oxfmt with structural guards",
+  "description": "AI-agent-safe GFM and MDX Markdown formatter with structural guards",
   "private": true,
   "scripts": {
-    "test": "node scripts/check-all.js && node --test test/unit/*.test.js test/integration/*.test.js && node scripts/check-consistency.js",
+    "test": "node scripts/check-all.js && node --test test/unit/*.test.js && node test/integration/cli.test.js && node scripts/check-consistency.js",
     "test:structural": "node scripts/check-all.js",
     "test:verbose": "node scripts/check-all.js test/fixtures/",
     "test:unit": "node --test test/unit/*.test.js",
-    "test:integration": "node --test test/integration/*.test.js",
+    "test:integration": "node test/integration/cli.test.js",
     "test:consistency": "node scripts/check-consistency.js",
     "format": "node scripts/format-files.js --fix",
     "format:check": "node scripts/format-files.js --check",
     "verify": "node scripts/format-files.js --verify",
     "release": "bash scripts/release.sh",
     "prepare": "git config core.hooksPath .githooks"
-  },
-  "devDependencies": {
-    "oxfmt": "0.56.0"
   },
   "engines": {
     "node": ">=20"
