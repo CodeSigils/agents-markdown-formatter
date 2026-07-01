@@ -10,8 +10,6 @@
 
 const FORMAT_FILES = [
   "README.md",
-  "AGENTS.md",
-  "CHANGELOG.md",
   "skills/markdown-formatter/SKILL.md",
 ];
 

@@ -1,27 +1,25 @@
 #!/bin/bash
 #
-# release.sh — Tag and create a GitHub Release from CHANGELOG.md.
+# release.sh — Tag and create a GitHub Release from git history.
 #
 # Preconditions (checked before doing anything):
 #   1. Working tree is clean (no uncommitted changes)
 #   2. Tag doesn't already exist locally or remotely
-#   3. CHANGELOG.md has a "## v<VERSION>" section (already moved from Unreleased)
-#   4. gh CLI is authenticated and can reach the remote
-#   5. Release commit touches ONLY version-related files (isolated-bump rule)
-#   6. HEAD is pushed to origin (CI had a chance to run)
-#   7. CI is green on HEAD (or run in progress)
+#   3. gh CLI is authenticated and can reach the remote
+#   4. Release commit touches ONLY version-related files (isolated-bump rule)
+#   5. HEAD is pushed to origin (CI had a chance to run)
+#   6. CI is green on HEAD (or run in progress)
 #
 # What it does:
 #   1. Creates an annotated git tag v<VERSION> from package.json version
 #   2. Pushes HEAD and the annotated tag to origin/main
-#   3. Creates a GitHub Release with the corresponding CHANGELOG section as body
+#   3. Creates a GitHub Release with commit subjects since the previous tag
 #
 # Usage:
 #   bash scripts/release.sh
 #
 # Prerequisites:
 #   - Working tree clean
-#   - CHANGELOG.md updated (entries moved from ## Unreleased to ## v<VERSION>)
 #   - Versions bumped in package.json, SKILL.md, README badge
 #   - Version-bump commit is isolated (no runtime changes mixed in)
 #   - CI green on the commit being tagged
@@ -44,6 +42,7 @@ info()  { echo "  $*"; }
 # ---------------------------------------------------------------------------
 VERSION="$(node -p "require('./package.json').version")"
 TAG="v${VERSION}"
+PREVIOUS_TAG="$(git tag -l 'v*' --sort=-version:refname | head -1 || true)"
 
 echo "Preparing release ${TAG} ..."
 echo ""
@@ -70,26 +69,7 @@ fi
 echo "  ✓ Tag available"
 
 # ---------------------------------------------------------------------------
-# Precondition 3: CHANGELOG has a versioned section (not still under Unreleased)
-# ---------------------------------------------------------------------------
-info "Checking CHANGELOG.md ..."
-if ! grep -q "^## ${TAG}$" CHANGELOG.md; then
-  die "CHANGELOG.md has no '## ${TAG}' section. Move entries from '## Unreleased' first."
-fi
-
-# Warn if Unreleased section has unshipped entries
-UNRELEASED_LINE="$(grep -n "^## Unreleased" CHANGELOG.md | head -1 | cut -d: -f1 || true)"
-NEXT_SECTION_LINE="$(grep -n "^## " CHANGELOG.md | awk -F: "\$1 > ${UNRELEASED_LINE:-0}" | head -1 | cut -d: -f1 || true)"
-if [[ -n "${UNRELEASED_LINE}" && -n "${NEXT_SECTION_LINE}" ]]; then
-  GAP=$(( NEXT_SECTION_LINE - UNRELEASED_LINE ))
-  if [[ "${GAP}" -gt 2 ]]; then
-    warn "'## Unreleased' section has entries that will not be in this release."
-  fi
-fi
-echo "  ✓ Changelog ready"
-
-# ---------------------------------------------------------------------------
-# Precondition 4: gh CLI is authenticated
+# Precondition 3: gh CLI is authenticated
 # ---------------------------------------------------------------------------
 info "Checking gh auth ..."
 if ! gh auth status 2>&1 | grep -q "Logged in"; then
@@ -98,12 +78,12 @@ fi
 echo "  ✓ Authenticated"
 
 # ---------------------------------------------------------------------------
-# Precondition 5: release commit is isolated (version-bump only)
+# Precondition 4: release commit is isolated (version-bump only)
 # ---------------------------------------------------------------------------
 info "Checking release commit isolation ..."
 
 # Files that are allowed to change in a release commit
-ALLOWED_RELEASE_FILES="^CHANGELOG\.md$|^package\.json$|^package-lock\.json$|^README\.md$|^skills/markdown-formatter/SKILL\.md$"
+ALLOWED_RELEASE_FILES="^package\.json$|^package-lock\.json$|^README\.md$|^skills/markdown-formatter/SKILL\.md$"
 
 # Get files changed in HEAD vs its parent
 PARENT_SHA="$(git rev-parse HEAD~1 2>/dev/null || true)"
@@ -126,7 +106,7 @@ else
   if [[ "${VIOLATIONS}" -gt 0 ]]; then
     echo ""
     die "Release commit changes ${VIOLATIONS} file(s) outside the version-bump allowlist.
-  Allowed: CHANGELOG.md, package.json, package-lock.json, README.md, skills/markdown-formatter/SKILL.md
+  Allowed: package.json, package-lock.json, README.md, skills/markdown-formatter/SKILL.md
   Fix: 1. Commit runtime changes separately (not in the release commit)
         2. Then make a clean version-bump commit with only the files above"
   fi
@@ -134,7 +114,7 @@ else
 fi
 
 # ---------------------------------------------------------------------------
-# Precondition 6: HEAD is pushed to origin
+# Precondition 5: HEAD is pushed to origin
 # ---------------------------------------------------------------------------
 info "Checking HEAD is on origin ..."
 LOCAL_HEAD="$(git rev-parse HEAD)"
@@ -146,7 +126,7 @@ fi
 echo "  ✓ Pushed (origin/HEAD matches local HEAD)"
 
 # ---------------------------------------------------------------------------
-# Precondition 7: CI is green on HEAD
+# Precondition 6: CI is green on HEAD
 # ---------------------------------------------------------------------------
 info "Checking CI status for $(git rev-parse --short HEAD) ..."
 
@@ -226,17 +206,24 @@ echo "Pushing tag ${TAG} ..."
 git push origin "${TAG}"
 
 # ---------------------------------------------------------------------------
-# Extract CHANGELOG body for this version
+# Build release body from git history
 # ---------------------------------------------------------------------------
 BODY_FILE="$(mktemp)"
 trap 'rm -f "${BODY_FILE}"' EXIT
 
-awk "/^## ${TAG}$/{flag=1; next} /^## /{flag=0} flag" CHANGELOG.md > "${BODY_FILE}"
+{
+  echo "Changes in ${TAG}:"
+  echo ""
+  if [[ -n "${PREVIOUS_TAG}" ]]; then
+    git log --no-merges --pretty='- %s' "${PREVIOUS_TAG}..HEAD"
+  else
+    git log --no-merges --pretty='- %s' HEAD
+  fi
+} > "${BODY_FILE}"
 
 # Check we got something
 if [[ ! -s "${BODY_FILE}" ]]; then
-  echo "ERROR: Failed to extract release body from CHANGELOG.md for ${TAG}." >&2
-  echo "  Make sure the section '## ${TAG}' has content before the next '## ' heading." >&2
+  echo "ERROR: Failed to build release body from git history for ${TAG}." >&2
   exit 1
 fi
 

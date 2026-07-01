@@ -5,9 +5,9 @@
 
 Deterministic Markdown formatting for AI-agent-authored docs.
 
-This repository builds a Hermes-compatible GitHub-Flavored Markdown (GFM) and MDX formatter skill powered by Oxc's
-`oxfmt`. It formats the Markdown container, keeps fenced code untouched, and adds structural guards so tables and fences
-do not silently drift. The CLI is plain Node.js and can also be used outside Hermes.
+This repository builds a Hermes-compatible GitHub-Flavored Markdown (GFM) and MDX formatter skill. The formatter is a
+zero-dependency Node.js module that normalizes Markdown container syntax and leaves fenced code content opaque. Guard
+scripts enforce table, pipe, and fence safety before formatting and can roll back writes when structure drifts.
 
 ## Quick start
 
@@ -38,106 +38,31 @@ node ~/.hermes/skills/markdown-formatter/src/index.js --doctor
 ## Why this exists
 
 AI agents write a lot of Markdown: READMEs, plans, runbooks, notes, review comments, and MDX documentation. That output
-often has the same failure modes: very long prose lines, inconsistent list and blockquote wrapping, fragile tables, and
-fenced code blocks that should not be reformatted as if they were production source files. Generic Markdown formatting
-tools can either leave too much drift in place or expand their blast radius into embedded examples.
+often has the same failure modes: trailing whitespace, missing final newlines, inconsistent indentation, fragile tables,
+and fenced code blocks that should not be reformatted as production source files.
 
-This repository cures that specific problem by making Markdown normalization deterministic while keeping structural
-safety explicit. It formats the Markdown container, bounds AI-generated prose to readable lines, treats embedded code as
-opaque payload, and uses repository-owned guards to detect table and fence drift before a formatter can silently damage
-document structure.
-
-## Why not just use another Markdown tool?
-
-| Tool/use case  | Fit                                                                                 |
-| :------------- | :---------------------------------------------------------------------------------- |
-| Prettier       | Great general formatter; broader embedded-language behavior than this repo needs    |
-| markdownlint   | Great style checker; not formatter-first and does not run this repository's guards  |
-| `oxfmt` direct | Fast canonical formatter; no repository-specific rollback or structural guard layer |
-| This repo      | Agent-safe GFM/MDX formatting with opaque fenced code and rollback-safe guards      |
+This repository keeps that scope narrow. The formatter handles low-risk presentation normalization, while guard scripts
+handle structure and safety policy.
 
 ## What it does
 
-The Markdown Formatter Skill formats Markdown files with `oxfmt` and adds optional structural guardrails for GFM fences
-and tables.
+Formatter-owned behavior:
 
-Core behavior:
+- trailing whitespace removal
+- final newline insertion
+- leading-tab indentation normalization outside fences
+- GFM table alignment when tables have no empty-cell ambiguity
+- tilde-fence to backtick-fence normalization, with backtick-count escalation when needed
 
-- `oxfmt` performs the canonical formatting pass.
-- `--guard` snapshots structure before formatting, checks it after formatting, and restores the original file if
-  structural drift is detected.
-- `--verify` checks structure, formatting, and idempotence without modifying files.
-- `--validate` checks structure, fences, tables, and pipes without formatting.
-- `--check`, `--dry-run`, and `--validate` refuse adjacent-pipe table artifacts before invoking `oxfmt`. Write modes
-  (`--fix`, `--guard`, default) automatically repair them.
-- `--doctor` checks runtime prerequisites and payload completeness without modifying files.
-- The shipped skill payload has no npm runtime dependencies.
+Guard-owned behavior:
 
-Scope:
+- fence closure and malformed fence info strings
+- table column counts
+- unescaped inline-code pipes in table rows
+- adjacent-pipe table hazards
+- pre/post structural drift detection and rollback for `--guard`
 
-- In scope: GFM tables, fenced code blocks, task lists, headings, lists, blockquotes, links, autolinks, inline code,
-  strikethrough, and MDX files.
-- Out of scope: Obsidian wiki links, Mermaid validation, Pandoc dialects, semantic rewriting, and JSX syntax validation
-  inside MDX.
-
-## Formatting philosophy
-
-The formatter intentionally normalizes Markdown prose while treating embedded code as opaque payload. The shipped Oxfmt
-config uses `printWidth: 120` and `proseWrap: "always"` so long agent-generated paragraphs become stable, bounded output
-instead of remaining as uncontrolled single-line prose. With `proseWrap: "always"`, adjacent paragraph content —
-including indented list continuations without a blank-line separator — is reflowed onto the parent line. This is
-expected bounded-wrap behavior, not a structural change.
-
-The same config sets `embeddedLanguageFormatting: "off"`. Fenced code blocks, examples, partial snippets, pseudocode,
-and MDX embedded regions are often intentionally incomplete or language-mixed. Reformatting them would turn this tool
-from a Markdown formatter into a multi-language formatter orchestrator, increasing failure modes and review noise.
-
-The intended workflow is to absorb normalization churn once, then keep future diffs small and predictable with
-`--check`, `--verify`, and CI.
-
-## Table and fence safety policy
-
-Table and fence safety is enforced by repository-owned structural guards, not by `.oxfmtrc.json`. Oxfmt performs the
-canonical Markdown formatting pass, while the local guard scripts verify that table and fence structure survived
-formatting:
-
-- `check-tables.js` enforces formatter-safe table column counts and pipe consistency, including unescaped pipes inside
-  inline code spans that `oxfmt`/Prettier would split as table delimiters. It is stricter than GFM body-row parsing
-  because `oxfmt` must not receive table shapes known to drift.
-- `check-fences.js` validates fence closure and accidental malformed info strings.
-- `check-structure.js` snapshots fences and tables before formatting, then compares them afterward.
-- `check-pipes.js` detects adjacent pipes (`||`) in table rows, which create valid empty cells per GFM §4.10. Since
-  `oxfmt` cannot safely format `||` tables, write modes (`--fix`, `--guard`, default) automatically repair them by
-  inserting a space between the pipes (`| |`), preserving the empty-cell semantics. Read-only modes (`--check`,
-  `--dry-run`, `--validate`) still block with a clear error before `oxfmt` is invoked.
-- Empty-cell tables that remain unsafe for `oxfmt`, including no-leading-pipe rows with empty edge cells, are preserved
-  by skipping the formatter pass after safety repairs.
-- Table validation, structural table snapshots, pipe-safety checks, and automatic table repair ignore table-shaped text
-  inside fenced code blocks.
-- `--check`, `--fix`, `--dry-run`, `--guard`, and `--validate` run pipe-safety preflight before `oxfmt`. Write modes
-  repair adjacent pipes automatically; read-only modes refuse to proceed when adjacent pipes are detected.
-- `--guard` restores the original file content if post-format structure changes.
-- **Unclosed-fence preflight gate.** All CLI modes detect unclosed fences via `hasUnclosedFence()` before running
-  table/pipe checks. When an unclosed fence is found, the CLI warns that table and pipe checks are unreliable (the
-  shared fence tracker treats all content after the opener as inside a code block) and skips them, while continuing with
-  fence validation and formatting. Run `--fences` to locate the unclosed fence opener.
-- **Long-fence heuristic.** `check-structure.js` flags closed fences that span >40 lines and contain GFM table structure
-  (header + delimiter pair). Such fences likely have a closer that belongs to a different opener — the shared tracker
-  treats the whole span as a single fence, blinding table/pipe checks. The warning includes the suspected line numbers.
-
-Fence policy is intentionally structural, not style-only. See the [shipped SKILL.md](skills/markdown-formatter/SKILL.md)
-for the complete policy (bare fences, hidden whitespace tags, GFM backtick info-string rules, closure, post-format
-drift).
-
-This keeps handling conservative: validate strongly, avoid semantic rewriting, and do not pretend the formatter
-configuration can express table- or fence-safety semantics it does not control.
-
-## Architecture: formatter as a commodity
-
-The guard scripts (`--verify`, `--guard`, `--check`, `--doctor`) are formatter-agnostic. The formatter (oxfmt) is a
-swappable component wrapped by the guard layer. If oxfmt became unmaintained, swapping it for Prettier's Markdown
-formatter is a `package.json` line change — the guard layer, structural checks, idempotence verification, and rollback
-logic keep working unchanged.
+The shipped skill payload has no npm runtime dependencies.
 
 ## CLI reference
 
@@ -150,8 +75,6 @@ node skills/markdown-formatter/src/index.js [options] <path...>
 Hermes is the first packaged skill target: `SKILL.md`, the install path, and shipped metadata are Hermes-compatible. The
 CLI itself does not require Hermes at runtime.
 
-### Available flags
-
 | Flag              | Description                                                                                                                  |
 | ----------------- | ---------------------------------------------------------------------------------------------------------------------------- |
 | `--check`         | Check pipe safety and formatting without writing changes                                                                     |
@@ -161,60 +84,50 @@ CLI itself does not require Hermes at runtime.
 | `--verify`        | Check formatting, idempotence, and structural integrity read-only                                                            |
 | `--fences`        | Validate fence structure with `check-fences.js`                                                                              |
 | `--validate`      | Run structural, fence, table, and pipe validations                                                                           |
-| `--doctor`        | Check Node.js, Oxfmt, config, and payload readiness without modifying files                                                  |
+| `--doctor`        | Check Node.js and payload readiness without modifying files                                                                  |
 | `--dry-run`, `-n` | Run pipe-safety preflight, then show what would change without writing                                                       |
 | `--audit-tables`  | Print table row cell counts and pipe hazards without writing; use before/after agent table edits                             |
 | `--no-repair`     | In write modes, report repairable table issues instead of modifying them                                                     |
 | `--help`, `-h`    | Display help message                                                                                                         |
 
-## Install instructions
+## Safety policy
 
-For Hermes Agent users:
+- `check-tables.js` enforces formatter-safe table column counts and pipe consistency, including unescaped pipes inside
+  inline code spans. It is stricter than GFM body-row parsing because autonomous formatting should not guess table
+  intent.
+- `check-pipes.js` detects adjacent pipes (`||`) in table rows, which create valid empty cells per GFM. Write modes
+  (`--fix`, `--guard`, default) repair them by inserting a space between the pipes (`| |`), preserving empty-cell
+  semantics. Read-only modes (`--check`, `--dry-run`, `--validate`) block with a clear error.
+- Empty-cell tables that remain ambiguous, including no-leading-pipe rows with empty edge cells, are preserved by
+  skipping the full formatter pass after safety repairs.
+- Table validation, structural table snapshots, pipe-safety checks, and automatic table repair ignore table-shaped text
+  inside fenced code blocks.
+- `--guard` restores the original file content if post-format structure changes.
+- All CLI modes detect unclosed fences before table/pipe checks. When an unclosed fence is found, the CLI warns that
+  table and pipe checks are unreliable and skips them while continuing with fence validation and formatting.
 
-```bash
-hermes skills install CodeSigils/agents-markdown-formatter/markdown-formatter --yes
-```
-
-If Hermes blocks installation because the community-source security scanner flags the runtime wrapper for manual review,
-inspect the warnings and install with `--force` only if they match the reviewed source:
-
-```bash
-hermes skills inspect CodeSigils/agents-markdown-formatter/markdown-formatter
-hermes skills install CodeSigils/agents-markdown-formatter/markdown-formatter --yes --force
-```
+## Install payload
 
 The installed skill payload contains only these files on the user's disk:
 
 ```text
 ~/.hermes/skills/markdown-formatter/
-├── SKILL.md                    # Hermes skill definition, metadata, usage, scope, and examples
-├── .oxfmtrc.json               # Runtime Oxfmt config used by src/index.js
+├── SKILL.md
 ├── src/
-│   └── index.js                # Canonical formatter CLI and Oxfmt orchestration entrypoint
+│   ├── format-content.mjs
+│   └── index.js
 └── scripts/
-    ├── check-structure.js      # Structural snapshot, validation, and pre/post drift comparison
-    ├── check-fences.js         # Fenced code block validator for info strings and closure rules
-    ├── check-tables.js         # Formatter-safety table validator (columns and inline-code pipes)
-    └── check-pipes.js          # Adjacent-pipe (empty cell) diagnostic for GFM tables
+    ├── check-structure.js
+    ├── check-fences.js
+    ├── check-tables.js
+    └── check-pipes.js
 ```
 
-Repository-only files (`AGENTS.md`, `README.md`, `test/`, `package.json`, etc.) are excluded from the shipped payload.
+Repository-only files (`README.md`, `test/`, `package.json`, etc.) are excluded from the shipped payload.
 
 ## Prerequisites
 
-The formatter requires Node.js >=20 and an `oxfmt` binary available in one of these locations:
-
-1. Local development: `node_modules/.bin/oxfmt` after `npm ci` (`oxfmt.cmd`/`oxfmt.exe` are also checked on Windows)
-2. System PATH: `oxfmt` available as an executable on PATH
-
-For an installed Hermes skill, put `oxfmt` on PATH:
-
-```bash
-npm install -g oxfmt
-oxfmt --version
-```
-
-For repository development, use the pinned devDependency:
+The formatter requires Node.js >=20. For repository development:
 
 ```bash
 npm ci
@@ -226,81 +139,52 @@ To diagnose an installed skill without modifying files:
 node ~/.hermes/skills/markdown-formatter/src/index.js --doctor
 ```
 
-`--doctor` exits 0 when Node.js, `oxfmt`, bundled config, and required runtime payload files are ready. It exits 1 with
-actionable guidance when a required runtime piece is missing.
-
-Runtime config (`printWidth: 120`, `embeddedLanguageFormatting: off`) is documented in the
-[shipped SKILL.md](skills/markdown-formatter/SKILL.md).
+`--doctor` exits 0 when Node.js and required runtime payload files are ready.
 
 ## Test structure
 
-Reference fixtures and test organization:
-
-- `test/fixtures/current/` — Real-world docs that should format cleanly
-- `test/fixtures/oxfmt-spike/` — Oxfmt edge cases for fence behavior and table alignment
-- `test/fixtures/pipe-safety/` — Valid GFM that requires guard behavior (empty cells, oxfmt-unsafe tables)
-- `test/fixtures/violations/` — Structural violations the guard must detect
-- `test/unit/` — Isolated component tests for structure, fences, tables, and CLI helpers
+- `test/fixtures/current/` — real-world docs that should format cleanly
+- `test/fixtures/format-edge-cases/` — formatter edge cases retained from the Oxfmt spike
+- `test/fixtures/pipe-safety/` — valid GFM that requires guard behavior
+- `test/fixtures/violations/` — structural violations the guard must detect
+- `test/unit/` — isolated component tests for formatter and guards
 - `test/integration/` — CLI and pipeline end-to-end tests
 
-## Shipping and allowlist
+## Shipping and release
 
 The skill follows a strict runtime allowlist:
 
 - Shipped: only files under `skills/markdown-formatter/` needed at runtime
-- Excluded: planning docs, tests, fixtures, development tooling, and governance files
+- Excluded: planning docs, tests, fixtures, development tooling, and repository-only metadata
 - Verification: `bash scripts/staged-install-verify.sh` stages and tests the exact runtime payload
 - Dependency boundary: root `package.json` and `package-lock.json` are repository-only
 
-## Release posture
-
-`v1.1.0` is the current runtime release. `main` may contain maintenance commits after that tag for CI, checks, or
-repository documentation, but those changes should not be treated as a runtime release unless files under
-`skills/markdown-formatter/` change and the staged payload is verified again.
-
 Recommended release practice:
 
-1. Do not force-move a published tag.
-2. Keep runtime changes and version bumps in separate commits (see [AGENTS.md](AGENTS.md#release-cycle-policy) for the
-   isolated-bump rule).
-3. Before tagging a runtime release, verify the exact commit with:
+1. Keep runtime changes and version bumps in separate commits.
+2. Before tagging a runtime release, verify the exact commit with:
 
    ```bash
    node scripts/check-consistency.js
    npm test
-   npm run test:unit
-   npm run test:integration
-   bash scripts/staged-install-verify.sh
    npm run format:check
+   bash scripts/staged-install-verify.sh
    ```
 
-4. Push the version-bump commit to main and **confirm GitHub Actions is green** before proceeding. The release script
-   enforces this precondition.
-5. Run the release script (requires `gh` CLI authenticated):
+3. Push the version-bump commit to main and confirm GitHub Actions is green.
+4. Run the release script:
 
    ```bash
    npm run release
    ```
 
-   The script reads the version from `package.json`, validates 7 preconditions (clean tree, tag uniqueness, CHANGELOG
-   section exists, gh authenticated, commit isolation — only version-related files changed — HEAD pushed to origin, CI
-   green), creates an annotated tag, pushes HEAD and the tag to origin, then publishes the GitHub Release with the
-   matching CHANGELOG section as body. CI not yet green or mixed-in runtime changes will block with a clear error.
-   Bypass in emergency: `SKIP_CI_CHECK=1 bash scripts/release.sh`.
+The release script validates a clean tree, tag availability, isolated version metadata changes, pushed HEAD, and green
+CI before tagging. GitHub Release notes are generated from commit subjects since the previous version tag.
 
-6. Verify CI passes for the tag push.
-7. If the release must be aborted after tagging, run `git tag -d vX.Y.Z` locally and delete the remote tag before
-   fixing.
-8. Avoid expanding scope during release cleanup; use follow-up issues for new Markdown dialects, embedded-code
-   formatting, or broader configuration systems.
+## Project files
 
-## Agent contract
-
-Agent behavior and constraints are defined in:
-
-- [`AGENTS.md`](AGENTS.md) — Repository governance and agent workflow policies
-- [`skills/markdown-formatter/SKILL.md`](skills/markdown-formatter/SKILL.md) — Hermes-compatible packaged skill
-  definition
-
-Agents working on this repository must consult `AGENTS.md` before implementation work and use this repository's
-Oxc/Oxfmt validation path for edited Markdown files.
+- [`skills/markdown-formatter/SKILL.md`](skills/markdown-formatter/SKILL.md) — packaged skill instructions
+- [`skills/markdown-formatter/src/index.js`](skills/markdown-formatter/src/index.js) — CLI entrypoint
+- [`skills/markdown-formatter/src/format-content.mjs`](skills/markdown-formatter/src/format-content.mjs) — formatter
+- [`scripts/check-consistency.js`](scripts/check-consistency.js) — repository drift checks
+- [`scripts/staged-install-verify.sh`](scripts/staged-install-verify.sh) — staged runtime payload verification

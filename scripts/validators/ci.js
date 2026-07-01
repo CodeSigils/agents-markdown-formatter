@@ -19,9 +19,9 @@ function validateCi(files) {
 
   // Anti-patterns that must NOT appear
   const forbids = [
-    { pattern: /markdownlint/i, label: "uses markdownlint (not oxfmt)" },
+    { pattern: /markdownlint/i, label: "uses markdownlint instead of this repo's formatter" },
     { pattern: /npx\s+markdown/i, label: "uses npx markdownlint" },
-    { pattern: /npx\s+oxfmt/i, label: "uses npx oxfmt (should use pinned npm dependency or PATH)" },
+    { pattern: /npx\s+oxfmt/i, label: "uses npx oxfmt" },
     { pattern: /test\/fixtures\/violations/i, label: "includes violations/ in formatter check (will fail CI)" },
   ];
   for (const { pattern, label } of forbids) {
@@ -32,13 +32,12 @@ function validateCi(files) {
 
   // Required patterns that must appear
   const required = [
-    { pattern: /oxfmt.*--version|oxfmt.*version/i, label: "verifies oxfmt version" },
     { pattern: /npm\s+run\s+test:structural/i, label: "runs test:structural for guard checks" },
     { pattern: /test\/unit\/.*\.test\.js/i, label: "runs unit tests" },
     { pattern: /test\/integration\/.*\.test\.js/i, label: "runs integration tests" },
     { pattern: /npm\s+run\s+format:check/i, label: "checks maintainer docs formatting" },
     { pattern: /staged-install-verify\.sh/i, label: "verifies staged runtime payload" },
-    { pattern: /node_modules\/\.bin\/oxfmt|npm\s+ci/i, label: "uses pinned npm oxfmt install" },
+    { pattern: /npm\s+ci/i, label: "installs repository dependencies" },
     { pattern: /CHECK_BASE_REF/i, label: "sets CHECK_BASE_REF for release-drift checks" },
     { pattern: /fetch-depth:\s*0/i, label: "uses full git depth for diff history in precheck" },
   ];

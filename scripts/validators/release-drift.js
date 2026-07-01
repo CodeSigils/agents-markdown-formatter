@@ -2,12 +2,12 @@
 
 /**
  * Release-drift validator.
- * When runtime files change, CHANGELOG must have Unreleased entries,
- * and SKILL.md version should reflect accumulated changes since latest tag.
+ * When runtime files change, SKILL.md version should reflect accumulated
+ * changes since latest tag.
  */
 
 const { spawnSync } = require("child_process");
-const { ROOT, read, extractFrontmatterVersion } = require("./common");
+const { ROOT, extractFrontmatterVersion } = require("./common");
 
 const RUNTIME_DIRS = ["skills/markdown-formatter/"];
 
@@ -49,24 +49,6 @@ function validateReleaseDrift(files) {
   }
 
   const runtimeChanges = changedFiles.filter(isRuntimeFile);
-
-  if (runtimeChanges.length > 0) {
-    const changelogPath = "CHANGELOG.md";
-    if (!changedFiles.includes(changelogPath)) {
-      errors.push(
-        `release-drift: ${runtimeChanges.length} runtime file(s) changed but ${changelogPath} did not — ` +
-        `add entries under "## Unreleased"`
-      );
-    } else {
-      const changelog = read(changelogPath);
-      if (changelog && !changelog.includes("## Unreleased")) {
-        errors.push(
-          `release-drift: ${changelogPath} changed but missing "## Unreleased" section — ` +
-          `add entries before the first versioned heading`
-        );
-      }
-    }
-  }
 
   const skillMd = files["skills/markdown-formatter/SKILL.md"];
   const latestTagVer = getLatestTagVersion();

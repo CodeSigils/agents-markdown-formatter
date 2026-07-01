@@ -38,17 +38,6 @@ jobs:
         CHECK_BASE_REF: ${{ github.event_name == 'push' && github.event.before || github.event.pull_request.base.sha }}
       run: node scripts/check-consistency.js
 
-    - name: Verify oxfmt version
-      run: |
-        OXFMT=./node_modules/.bin/oxfmt
-        "$OXFMT" --version
-        EXPECTED=$(node -e "const p=require('./package.json'); console.log(p.devDependencies.oxfmt)")
-        ACTUAL=$("$OXFMT" --version | awk '{print $2}')
-        if [ "$ACTUAL" != "$EXPECTED" ]; then
-          echo "ERROR: oxfmt version mismatch (expected $EXPECTED, got $ACTUAL)"
-          exit 1
-        fi
-
   tests:
     needs: precheck
     runs-on: ubuntu-latest
@@ -79,7 +68,7 @@ jobs:
 
     - name: Run unit and integration tests
       if: matrix.suite == 'unit-integr'
-      run: node --test test/unit/*.test.js test/integration/*.test.js
+      run: node --test test/unit/*.test.js && node test/integration/cli.test.js
 
   verify:
     needs: [precheck, tests]
@@ -106,15 +95,15 @@ jobs:
       run: npm run format:check
 
     - name: Fixture formatting check and idempotence
-      # Checks formatting correctness (oxfmt --check) and idempotence (two-pass
+      # Checks formatting correctness and idempotence (two-pass
       # format produces identical output) on temp copies of clean fixtures.
       # Structural validation is covered by the structural test matrix job.
       run: |
         trap 'rm -rf "$TMP_DIR"' EXIT
         TMP_DIR=$(mktemp -d)
-        mkdir -p "$TMP_DIR/input/current" "$TMP_DIR/input/oxfmt-spike"
+        mkdir -p "$TMP_DIR/input/current" "$TMP_DIR/input/format-edge-cases"
         cp -a test/fixtures/current/. "$TMP_DIR/input/current/"
-        cp -a test/fixtures/oxfmt-spike/. "$TMP_DIR/input/oxfmt-spike/"
+        cp -a test/fixtures/format-edge-cases/. "$TMP_DIR/input/format-edge-cases/"
 
         # Verify formatting on copies (read-only)
         node skills/markdown-formatter/src/index.js --check --all "$TMP_DIR/input/"

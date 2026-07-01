@@ -11,8 +11,8 @@ STAGE_DIR="${SOURCE_DIR}/staged-install"
 # Define the exact runtime allowlist (what should be copied)
 RUNTIME_ALLOWLIST=(
     "skills/markdown-formatter/SKILL.md"
-    "skills/markdown-formatter/.oxfmtrc.json"
     "skills/markdown-formatter/src/index.js"
+    "skills/markdown-formatter/src/format-content.mjs"
     "skills/markdown-formatter/scripts/check-structure.js"
     "skills/markdown-formatter/scripts/check-fences.js"
     "skills/markdown-formatter/scripts/check-tables.js"
@@ -21,7 +21,6 @@ RUNTIME_ALLOWLIST=(
 
 # Define dev-only paths that MUST NOT appear in staged payload
 DEV_ONLY_PATHS=(
-    "AGENTS.md"
     "README.md"
     "scripts/"
     "test/"
@@ -115,10 +114,9 @@ echo "Testing staged skill from ${STAGE_DIR}:"
 echo "======================================"
 cd "${STAGE_DIR}"
 
-# Make the index.js executable and expose the repository-pinned oxfmt as the
-# external formatter binary. The staged skill itself must not contain node_modules.
+# Make the index.js executable. The staged skill itself must not contain
+# node_modules or any external formatter binary.
 chmod +x skills/markdown-formatter/src/index.js
-export PATH="${SOURCE_DIR}/node_modules/.bin:${PATH}"
 
 FIXTURE_DIR="$(mktemp -d)"
 trap 'rm -rf "$FIXTURE_DIR"' EXIT
@@ -260,7 +258,7 @@ if [[ "$(cat "$INLINE_PIPE_FIXTURE")" != "$ORIGINAL_INLINE_PIPE_CONTENT" ]]; the
     exit 1
 fi
 
-echo "✓ Staged --fix blocks inline-code table pipes before oxfmt"
+echo "✓ Staged --fix blocks inline-code table pipes before formatter"
 
 if ./skills/markdown-formatter/src/index.js --guard "$GUARD_FIXTURE"; then
     echo "✓ Staged --guard succeeded"

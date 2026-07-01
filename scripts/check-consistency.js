@@ -20,15 +20,12 @@ const { validateReleaseDrift } = require("./validators/release-drift");
 const files = {};
 for (const f of [
   "README.md",
-  "AGENTS.md",
-  "CHANGELOG.md",
-  ".oxfmtrc.json",
   ".node-version",
   "package.json",
   ".github/workflows/ci.yml",
   "skills/markdown-formatter/SKILL.md",
-  "skills/markdown-formatter/.oxfmtrc.json",
   "skills/markdown-formatter/src/index.js",
+  "skills/markdown-formatter/src/format-content.mjs",
 ]) {
   files[f] = read(f);
 }
@@ -56,9 +53,7 @@ add(validateReleaseDrift(files));
 const readme = files["README.md"];
 const skillMd = files["skills/markdown-formatter/SKILL.md"];
 const indexJs = files["skills/markdown-formatter/src/index.js"];
-const agentsMd = files["AGENTS.md"];
-const oxfmtrc = files[".oxfmtrc.json"];
-const skillOxfmtrc = files["skills/markdown-formatter/.oxfmtrc.json"];
+const formatContent = files["skills/markdown-formatter/src/format-content.mjs"];
 const pkgJson = files["package.json"];
 
 // Node.js runtime min version
@@ -67,21 +62,10 @@ if (!runtimeMinNodeVersion) {
   errors.push("skills/markdown-formatter/src/index.js: NODE_RUNTIME_MIN_VERSION is missing or unreadable");
 }
 
-// package.json: oxfmt pinning and engines.node
+// package.json: engines.node
 if (pkgJson) {
   try {
     const pkg = JSON.parse(pkgJson);
-
-    // oxfmt must be pinned exactly (no ranges)
-    const devDeps = pkg.devDependencies || {};
-    const pkgVersion = devDeps.oxfmt;
-    if (pkgVersion) {
-      if (/^[~^*><=]/.test(pkgVersion)) {
-        errors.push(`oxfmt in package.json must be pinned exactly; found "${pkgVersion}"`);
-      }
-    } else {
-      warnings.push("oxfmt not found in package.json devDependencies");
-    }
 
     // engines.node must match source
     const nodeReq = pkg.engines && pkg.engines.node;
@@ -98,8 +82,8 @@ if (pkgJson) {
 
 // Stale reference checks across active docs
 const staleChecks = [
-  { pattern: /markdownlint-cli2/, reason: "old formatter tool" },
-  { pattern: /npx\s+markdownlint/, reason: "old linter via npx" },
+  { pattern: /npx\s+markdownlint/, reason: "external markdown linter via npx" },
+  { pattern: /npx\s+oxfmt|node_modules\/\.bin\/oxfmt/, reason: "external oxfmt invocation" },
   { pattern: /format-tables\.js.*format|primary.*formatter.*format-tables/i, reason: "format-tables is not the primary formatter" },
   { pattern: /name:\s*markdown-lint/, reason: "skill name should be 'markdown-formatter'" },
 ];
@@ -107,6 +91,7 @@ const staleChecks = [
 const ACTIVE_DRIFT_CHECK_PATTERNS = [
   ...FORMAT_FILES,
   "skills/markdown-formatter/src/index.js",
+  "skills/markdown-formatter/src/format-content.mjs",
   "skills/markdown-formatter/scripts/check-structure.js",
   "skills/markdown-formatter/scripts/check-fences.js",
   "skills/markdown-formatter/scripts/check-tables.js",
@@ -114,10 +99,10 @@ const ACTIVE_DRIFT_CHECK_PATTERNS = [
 ];
 
 for (const [file, content] of [
-  ["AGENTS.md", agentsMd],
   ["README.md", readme],
   ["skills/markdown-formatter/SKILL.md", skillMd],
   ["skills/markdown-formatter/src/index.js", indexJs],
+  ["skills/markdown-formatter/src/format-content.mjs", formatContent],
 ]) {
   if (!content) continue;
   if (!ACTIVE_DRIFT_CHECK_PATTERNS.some((p) => file.startsWith(p))) continue;
@@ -160,7 +145,12 @@ const { ROOT } = require("./validators/common");
 try {
   const stagedIndex = readFileSync(join(ROOT, STAGED_DIR, "skills/markdown-formatter/src/index.js"), "utf8");
   const sourceIndex = readFileSync(join(ROOT, "skills/markdown-formatter/src/index.js"), "utf8");
-  if (stagedIndex && sourceIndex && stagedIndex !== sourceIndex) {
+  const stagedFormatter = readFileSync(join(ROOT, STAGED_DIR, "skills/markdown-formatter/src/format-content.mjs"), "utf8");
+  const sourceFormatter = readFileSync(join(ROOT, "skills/markdown-formatter/src/format-content.mjs"), "utf8");
+  if (
+    (stagedIndex && sourceIndex && stagedIndex !== sourceIndex) ||
+    (stagedFormatter && sourceFormatter && stagedFormatter !== sourceFormatter)
+  ) {
     warnings.push(
       "staged-install/ is stale — run bash scripts/staged-install-verify.sh to regenerate"
     );
@@ -168,11 +158,6 @@ try {
 } catch { /* staged dir or files may not exist — not an error */ }
 
 // CLI flag documentation coverage
-const KNOWN_OXFMT_KEYS = new Set([
-  "tabWidth", "printWidth", "endOfLine", "insertFinalNewline",
-  "proseWrap", "embeddedLanguageFormatting", "ignorePatterns",
-]);
-
 if (indexJs && skillMd) {
   const flags = findCliFlags(indexJs);
   for (const flag of flags) {
@@ -198,26 +183,6 @@ if (indexJs && indexJs.includes("--doctor")) {
   if (!/function\s+runDoctor\s*\(/.test(indexJs)) {
     errors.push('CLI flag "--doctor" is listed but runDoctor() is missing');
   }
-}
-
-// oxfmt config alignment
-if (oxfmtrc) {
-  try {
-    const cfg = JSON.parse(oxfmtrc);
-    for (const key of Object.keys(cfg)) {
-      if (!KNOWN_OXFMT_KEYS.has(key)) {
-        warnings.push(`.oxfmtrc.json contains unknown key "${key}" — verify against official oxfmt docs`);
-      }
-    }
-  } catch (e) {
-    errors.push(`.oxfmtrc.json is not valid JSON: ${e.message}`);
-  }
-}
-
-if (!skillOxfmtrc) {
-  errors.push("skills/markdown-formatter/.oxfmtrc.json is missing from the runtime payload");
-} else if (oxfmtrc && skillOxfmtrc !== oxfmtrc) {
-  errors.push("root .oxfmtrc.json and skills/markdown-formatter/.oxfmtrc.json differ");
 }
 
 // ---------------------------------------------------------------------------

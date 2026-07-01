@@ -1,6 +1,6 @@
 ---
 name: markdown-formatter
-description: "AI-agent-safe GFM and MDX Markdown formatter powered by oxfmt with structural guards"
+description: "AI-agent-safe GFM and MDX Markdown formatter with structural guards"
 version: "1.1.0"
 author: "CodeSigils"
 license: "MIT"
@@ -10,8 +10,6 @@ metadata.hermes.tags:
   - formatter
   - gfm
   - mdx
-  - oxfmt
-  - oxc
   - ai-agents
   - documentation
   - guardrails
@@ -27,20 +25,29 @@ strikethrough, and MDX files.
 Out of scope: Obsidian wiki links, Mermaid validation, Pandoc dialects, semantic rewriting, YAML frontmatter semantics,
 and JSX syntax validation inside MDX.
 
-MDX note: Oxfmt formats MDX as Markdown + JSX. This skill does not validate JSX syntax or MDX imports/exports;
-structural guards apply GFM rules to the Markdown content only.
+MDX note: this skill formats Markdown container syntax and does not validate JSX syntax or MDX imports/exports.
+Structural guards apply GFM rules to the Markdown content only.
 
-## Runtime config
+## Runtime behavior
 
-The CLI passes the bundled `.oxfmtrc.json` to `oxfmt` and disables nested config discovery. The bundled config wraps
-prose at 120 characters and sets `embeddedLanguageFormatting` to `"off"`, so code inside fenced blocks is left as-is.
+The CLI uses the bundled `src/format-content.mjs` formatter. It has no npm runtime dependencies and does not discover
+external formatter configuration.
 
-## Why this skill exists
+Formatter-owned behavior:
 
-AI agents often produce Markdown with long prose lines, inconsistent wrapping, fragile tables, and fenced examples that
-should stay untouched. This skill normalizes the Markdown container while keeping structural safety explicit: prose is
-bounded for stable review, embedded code remains opaque, and table/fence/pipe drift is caught by guard scripts rather
-than left to formatter configuration alone.
+- Remove trailing whitespace.
+- Ensure a final newline.
+- Normalize leading tabs outside fenced code blocks.
+- Align GFM table columns when the table has no empty-cell ambiguity.
+- Normalize tilde fences to backtick fences, escalating the backtick count when nested content requires it.
+
+Guard-owned behavior:
+
+- Fence closure and malformed fence info strings.
+- Table column counts.
+- Unescaped inline-code pipes in table rows.
+- Adjacent-pipe table hazards.
+- Pre/post structural drift detection and rollback for `--guard`.
 
 ## Usage
 
@@ -59,10 +66,10 @@ Where `<skill-dir>` is the repository checkout (`skills/markdown-formatter/`) or
 - `--all`: Process directory inputs recursively; accepts multiple paths
 - `--guard`: Enable structural pre/post checks; rolls back file content on structural drift and cleans temporary
   snapshots
-- `--verify`: Run formatter and check structural integrity without writing changes
+- `--verify`: Run formatting, idempotence, and structural integrity checks without writing changes
 - `--fences`: Validate fenced code block language info strings
 - `--validate`: Run structural, fence, table, and pipe validations
-- `--doctor`: Check Node.js, Oxfmt, config, and payload readiness without modifying files
+- `--doctor`: Check Node.js and payload readiness without modifying files
 - `--dry-run`, `-n`: Run pipe-safety preflight, then show what would be changed without writing files
 - `--audit-tables`: Print table row cell counts and pipe hazards without writing; use before/after agent table edits
 - `--no-repair`: In write modes, report repairable table issues instead of modifying them
@@ -71,9 +78,8 @@ Where `<skill-dir>` is the repository checkout (`skills/markdown-formatter/`) or
 ## Prerequisites
 
 - `node` (>=20)
-- `oxfmt` (available on PATH for installed skill, or local `node_modules/.bin/oxfmt` for development)
 
-Run `--doctor` to verify runtime readiness (Node.js, oxfmt, config, payload).
+Run `--doctor` to verify runtime readiness.
 
 ## Fence policy
 
@@ -91,23 +97,20 @@ Fence validation is structural, not style-only:
 Table and pipe safety is enforced by guard scripts alongside the formatter:
 
 - `check-tables.js` enforces formatter-safe table column counts and pipe consistency, including unescaped pipes inside
-  inline code spans that `oxfmt`/Prettier would split as table delimiters. It is stricter than GFM body-row parsing
-  because `oxfmt` must not receive table shapes known to drift.
-- `check-pipes.js` detects adjacent pipes (`||`) that create empty cells per GFM §4.10 — leading (empty first cell),
-  internal (empty cell between columns), and trailing (empty trailing cell). Correctly ignores escaped pipes and inline
-  code spans. Write modes (`--fix`, `--guard`, default) automatically repair `||` by inserting a space (`| |`),
-  preserving empty-cell semantics while making the table oxfmt-compatible. Read-only modes (`--check`, `--dry-run`,
-  `--validate`) block before invoking oxfmt.
-- Empty-cell tables that remain unsafe for `oxfmt`, including no-leading-pipe rows with empty edge cells, are preserved
-  by skipping the formatter pass after safety repairs.
+  inline code spans that would be split as table delimiters. It is stricter than GFM body-row parsing because
+  autonomous formatting should not guess table intent.
+- `check-pipes.js` detects adjacent pipes (`||`) that create empty cells per GFM: leading, internal, and trailing.
+  Write modes (`--fix`, `--guard`, default) automatically repair `||` by inserting a space (`| |`), preserving
+  empty-cell semantics. Read-only modes (`--check`, `--dry-run`, `--validate`) block before formatting.
+- Empty-cell tables that remain ambiguous, including no-leading-pipe rows with empty edge cells, are preserved by
+  skipping the full formatter pass after safety repairs.
 - Table validation, structural table snapshots, pipe-safety checks, and automatic table repair ignore table-shaped text
   inside fenced code blocks.
-- `--check`, `--fix`, `--dry-run`, `--guard`, and `--validate` run pipe-safety preflight before invoking oxfmt. Write
-  modes repair adjacent pipes automatically; read-only modes refuse to proceed when adjacent pipes are detected.
+- `--check`, `--fix`, `--dry-run`, `--guard`, and `--validate` run pipe-safety preflight before formatting. Write modes
+  repair adjacent pipes automatically; read-only modes refuse to proceed when adjacent pipes are detected.
 - **Unclosed-fence preflight gate.** All CLI modes detect unclosed fences via `hasUnclosedFence()` before running
-  table/pipe checks. When an unclosed fence is found, the CLI warns that table and pipe checks are unreliable (the
-  shared fence tracker treats all content after the opener as inside a code block) and skips them, while continuing with
-  fence validation and formatting. Run `--fences` to locate the unclosed fence opener.
+  table/pipe checks. When an unclosed fence is found, the CLI warns that table and pipe checks are unreliable and skips
+  them while continuing with fence validation and formatting. Run `--fences` to locate the unclosed fence opener.
 - **Long-fence heuristic.** `check-structure.js` flags closed fences that span >40 lines and contain GFM table structure
   (header + delimiter pair). Such fences may have a closer belonging to a different opener, blinding table/pipe checks
   across the affected content.
@@ -158,5 +161,4 @@ node skills/markdown-formatter/src/index.js --doctor
 
 ## References
 
-- Oxfmt documentation: https://oxc.rs/docs/guide/usage/formatter.md
 - Source repository and maintenance docs: https://github.com/CodeSigils/agents-markdown-formatter
