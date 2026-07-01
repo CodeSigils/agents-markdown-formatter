@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## v1.1.0
+
 - Add violation fixture `delimiter-adjacent-pipes.md` covering the pattern where only the delimiter row has `||` (header
   and data rows are clean). Registers as expected violation for `check-structure` and `check-tables` (column mismatch)
   in `check-all.js`.
