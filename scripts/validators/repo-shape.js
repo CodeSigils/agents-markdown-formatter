@@ -10,14 +10,11 @@ const { existsSync } = require("fs");
 const { join } = require("path");
 const { ROOT, read, findAllFiles } = require("./common");
 
-const EXCLUDE_DIRS = new Set(["node_modules", ".git", ".omo", ".open-mem", "oxfmt-spike"]);
+const EXCLUDE_DIRS = new Set(["node_modules", ".git", ".omo", ".open-mem", "format-edge-cases"]);
 
 const PLAN_EXPECTED_REPO_SHAPE = new Set([
-  "AGENTS.md",
   "README.md",
-  "CHANGELOG.md",
   ".node-version",
-  ".oxfmtrc.json",
   ".github/workflows/ci.yml",
   "package.json",
   "scripts/check-all.js",
@@ -25,8 +22,8 @@ const PLAN_EXPECTED_REPO_SHAPE = new Set([
   "scripts/release.sh",
   "scripts/staged-install-verify.sh",
   "skills/markdown-formatter/SKILL.md",
-  "skills/markdown-formatter/.oxfmtrc.json",
   "skills/markdown-formatter/src/index.js",
+  "skills/markdown-formatter/src/format-content.mjs",
   "skills/markdown-formatter/scripts/check-fences.js",
   "skills/markdown-formatter/scripts/check-structure.js",
   "skills/markdown-formatter/scripts/check-tables.js",
@@ -35,6 +32,10 @@ const PLAN_EXPECTED_REPO_SHAPE = new Set([
 ]);
 
 const HISTORICAL_LINT_ARTIFACTS = new Set([
+  "AGENTS.md",
+  "CHANGELOG.md",
+  ".oxfmtrc.json",
+  "skills/markdown-formatter/.oxfmtrc.json",
   "lint.js",
   "mdformat.js",
   "post-write.js",

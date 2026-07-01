@@ -3,7 +3,7 @@
  * check-all.js - Run structural checks against valid fixtures and ensure violation fixtures fail.
  *
  * Usage: node check-all.js [paths...]
- *   Defaults: test/fixtures/current test/fixtures/oxfmt-spike test/fixtures/pipe-safety test/fixtures/violations
+ *   Defaults: test/fixtures/current test/fixtures/format-edge-cases test/fixtures/pipe-safety test/fixtures/violations
  *
  * Exit codes:
  *   0  All checks passed
@@ -19,7 +19,7 @@ const ROOT = resolve(__dirname, '..');
 const SKILL_DIR = resolve(ROOT, 'skills/markdown-formatter');
 const DEFAULT_TARGETS = [
   'test/fixtures/current',
-  'test/fixtures/oxfmt-spike',
+  'test/fixtures/format-edge-cases',
   'test/fixtures/pipe-safety',
   'test/fixtures/violations',
 ];
