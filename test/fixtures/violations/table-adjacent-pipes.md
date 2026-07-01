@@ -1,7 +1,7 @@
 # Table with adjacent pipes
 
-Adjacent pipes (||) create empty cells. oxfmt cannot safely format these
-because it expands the column count and corrupts the table.
+Adjacent pipes (||) create empty cells. The formatter must not format these
+because they expand the column count and can corrupt the table.
 
 | Name  | Age | City   |
 |-------|-----|--------|

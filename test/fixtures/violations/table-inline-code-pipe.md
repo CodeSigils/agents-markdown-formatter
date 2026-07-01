@@ -1,6 +1,6 @@
 # Inline Code Pipe Table Violation
 
-Unescaped pipes inside inline code spans are valid GFM content, but oxfmt/Prettier splits them as table delimiters and corrupts the table. The formatter must block before invoking oxfmt.
+Unescaped pipes inside inline code spans are valid GFM content, but a formatter can split them as table delimiters and corrupt the table. The formatter must block before formatting.
 
 | Command | Description |
 | --- | --- |

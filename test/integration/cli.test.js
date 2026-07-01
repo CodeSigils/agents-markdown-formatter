@@ -1,23 +1,58 @@
 const { describe, it } = require('node:test');
 const assert = require('node:assert/strict');
-const { spawnSync } = require('node:child_process');
 const { copyFileSync, existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync, rmSync } = require('node:fs');
 const { join, resolve } = require('node:path');
 const { tmpdir } = require('node:os');
 
 const ROOT = resolve(__dirname, '../..');
 const CLI = join(ROOT, 'skills/markdown-formatter/src/index.js');
+const { main } = require(CLI);
 
 function runCli(args, options = {}) {
-  const result = spawnSync(process.execPath, [CLI, ...args], {
-    cwd: ROOT,
-    encoding: 'utf8',
-    ...options,
-  });
-  if (result.error) {
-    result.stderr = `${result.stderr || ''}\nspawn error: ${result.error.message}\n`;
+  const env = { ...process.env, ...(options.env || {}) };
+  delete env.NODE_TEST_CONTEXT;
+  delete env.NODE_TEST_WORKER_ID;
+
+  let stdout = '';
+  let stderr = '';
+  const oldCwd = process.cwd();
+  const oldEnv = process.env;
+  const oldStdoutWrite = process.stdout.write;
+  const oldStderrWrite = process.stderr.write;
+  const oldConsoleLog = console.log;
+  const oldConsoleError = console.error;
+  const oldConsoleWarn = console.warn;
+
+  process.env = env;
+  process.chdir(options.cwd || ROOT);
+  process.stdout.write = (chunk, ...writeArgs) => {
+    stdout += String(chunk);
+    if (typeof writeArgs.at(-1) === 'function') writeArgs.at(-1)();
+    return true;
+  };
+  process.stderr.write = (chunk, ...writeArgs) => {
+    stderr += String(chunk);
+    if (typeof writeArgs.at(-1) === 'function') writeArgs.at(-1)();
+    return true;
+  };
+  console.log = (...items) => { stdout += `${items.join(' ')}\n`; };
+  console.error = (...items) => { stderr += `${items.join(' ')}\n`; };
+  console.warn = (...items) => { stderr += `${items.join(' ')}\n`; };
+
+  try {
+    const status = main(['node', CLI, ...args]);
+    return { status, signal: null, error: undefined, stdout, stderr };
+  } catch (error) {
+    return { status: 1, signal: null, error, stdout, stderr: `${stderr}Error: ${error.message}\n` };
+  } finally {
+    console.log = oldConsoleLog;
+    console.error = oldConsoleError;
+    console.warn = oldConsoleWarn;
+    process.stdout.write = oldStdoutWrite;
+    process.stderr.write = oldStderrWrite;
+    process.chdir(oldCwd);
+    process.env = oldEnv;
   }
-  return result;
 }
 
 describe('markdown formatter CLI integration', () => {
@@ -300,7 +335,7 @@ describe('markdown formatter CLI integration', () => {
     }
   });
 
-  it('--fix --guard with double-pipe table repairs and skips oxfmt', () => {
+  it('--fix --guard with double-pipe table repairs and skips formatter', () => {
     const dir = mkdtempSync(join(tmpdir(), 'markdown-formatter-guard-double-pipe-'));
     const file = join(dir, 'double-pipe.md');
     try {
@@ -313,7 +348,7 @@ describe('markdown formatter CLI integration', () => {
       assert.match(result.stdout + result.stderr, /Repaired adjacent pipes/);
       assert.match(result.stdout + result.stderr, /empty table cells/);
       const content = readFileSync(file, 'utf8');
-      // Each row should be on its own line (oxfmt didn't collapse it)
+      // Each row should be on its own line.
       const lines = content.trim().split('\n');
       assert.equal(lines.length, 5, 'should have 5 lines (title + blank + 3 table rows)');
       assert.doesNotMatch(content, /\|\|/, 'no adjacent pipes remain');
@@ -365,25 +400,8 @@ describe('markdown formatter CLI integration', () => {
     assert.equal(result.status, 0, result.stdout + result.stderr);
     assert.match(result.stdout, /Markdown Formatter Doctor/);
     assert.match(result.stdout, /Node\.js:/);
-    assert.match(result.stdout, /oxfmt:/);
+    assert.match(result.stdout, /Formatter:/);
     assert.match(result.stdout, /Ready: yes/);
-  });
-
-  it('--doctor exits non-zero when oxfmt is unavailable', () => {
-    const dir = mkdtempSync(join(tmpdir(), 'markdown-formatter-doctor-'));
-    try {
-      const result = runCli(['--doctor'], {
-        cwd: dir,
-        env: { ...process.env, PATH: '' },
-      });
-
-      assert.equal(result.status, 1, result.stdout + result.stderr);
-      assert.match(result.stdout, /Markdown Formatter Doctor/);
-      assert.match(result.stdout, /oxfmt: missing/);
-      assert.match(result.stdout, /Ready: no/);
-    } finally {
-      rmSync(dir, { recursive: true, force: true });
-    }
   });
 
   it('--help prints usage information and exits 0', () => {
@@ -414,7 +432,7 @@ describe('markdown formatter CLI integration', () => {
     assert.match(result.stdout + result.stderr, /adjacent pipes/);
   });
 
-  it('--fix blocks inline-code table pipes before oxfmt can corrupt the table', () => {
+  it('--fix blocks inline-code table pipes before formatter can corrupt the table', () => {
     const dir = mkdtempSync(join(tmpdir(), 'markdown-formatter-inline-pipe-'));
     const file = join(dir, 'inline-pipe.md');
     try {
@@ -440,14 +458,13 @@ describe('markdown formatter CLI integration', () => {
       const result = runCli(['--fix', file]);
 
       assert.equal(result.status, 0, result.stdout + result.stderr);
-      // oxfmt normalizes column widths
       assert.match(readFileSync(file, 'utf8'), /\| A   \| B   \|/);
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }
   });
 
-  it('--fix preserves no-leading-pipe table empty edge cells by skipping oxfmt', () => {
+  it('--fix preserves no-leading-pipe table empty edge cells by skipping formatter', () => {
     const dir = mkdtempSync(join(tmpdir(), 'markdown-formatter-nolead-empty-'));
     const file = join(dir, 'empty-edge.md');
     try {

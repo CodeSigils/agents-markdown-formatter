@@ -69,7 +69,7 @@ describe('check-tables.js unit tests', () => {
     assert.match(errors[0], /row 1 has 1 cols but header has 2/);
   });
 
-  it('detects inline-code pipes in table rows before oxfmt can split them', () => {
+  it('detects inline-code pipes in table rows before formatter can split them', () => {
     const errors = validateTables('| Command | Description |\n| --- | --- |\n| `cat a | grep b` | pipeline |\n');
 
     assert.equal(errors.length, 1);

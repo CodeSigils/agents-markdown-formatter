@@ -5,11 +5,8 @@ const { join } = require('node:path');
 const { tmpdir } = require('node:os');
 const {
   NODE_RUNTIME_MIN_VERSION,
-  OXFMT_MAX_VERSION,
   parseArgs,
   runDoctor,
-  isSupportedOxfmtVersion,
-  getOxfmtPathCandidates,
   getSpawnOptions,
   resolveInputFiles,
   repairTableColumns,
@@ -23,8 +20,7 @@ describe('formatter CLI helper unit tests', () => {
     const result = runDoctor({
       log: (line) => output.push(line),
       nodeVersion: `v${NODE_RUNTIME_MIN_VERSION}.0.0`,
-      resolveOxfmt: () => '/tmp/oxfmt',
-      runVersion: () => ({ status: 0, stdout: 'oxfmt 0.54.0\n', stderr: '' }),
+      checkFormatter: () => ({ ok: true, error: null }),
       exists: () => true,
       ...options,
     });
@@ -56,8 +52,7 @@ describe('formatter CLI helper unit tests', () => {
 
     assert.equal(result, true);
     assert.match(output, new RegExp(`Node\\.js: v${NODE_RUNTIME_MIN_VERSION}\\.0\\.0 \\(ok\\)`));
-    assert.match(output, /oxfmt: \/tmp\/oxfmt \(oxfmt 0\.54\.0\)/);
-    assert.match(output, /Config: .*\.oxfmtrc\.json \(ok\)/);
+    assert.match(output, /Formatter: .*format-content\.mjs \(ok\)/);
     assert.match(output, /Payload: .*SKILL\.md \(ok\)/);
     assert.match(output, /Ready: yes/);
   });
@@ -66,23 +61,13 @@ describe('formatter CLI helper unit tests', () => {
     assert.deepStrictEqual(getSpawnOptions({ timeout: 5000 }), { encoding: 'utf8', timeout: 5000 });
   });
 
-  it('prefers Windows oxfmt shims without requiring shell execution', () => {
-    const candidates = getOxfmtPathCandidates({ cwd: 'C:\\repo', skillDir: 'C:\\skill', platform: 'win32' });
-
-    assert(candidates.includes(join('C:\\repo', 'node_modules', '.bin', 'oxfmt.cmd')));
-    assert(candidates.includes(join('C:\\skill', 'node_modules', '.bin', 'oxfmt.cmd')));
-    assert(candidates.every((candidate) => !candidate.includes('undefined')));
-  });
-
-  it('reports missing oxfmt from --doctor without exiting the process', () => {
+  it('reports missing formatter module from --doctor without exiting the process', () => {
     const { result, output } = collectDoctor({
-      resolveOxfmt: () => null,
-      runVersion: () => ({ status: 1, stdout: '', stderr: '' }),
+      checkFormatter: () => ({ ok: false, error: null }),
     });
 
     assert.equal(result, false);
-    assert.match(output, /oxfmt: missing/);
-    assert.match(output, /Install oxfmt on PATH/);
+    assert.match(output, /Formatter: .*format-content\.mjs \(missing or invalid\)/);
     assert.match(output, /Ready: no/);
   });
 
@@ -98,42 +83,12 @@ describe('formatter CLI helper unit tests', () => {
     assert.match(output, /Ready: no/);
   });
 
-  it('reports oxfmt version command failures from --doctor checks', () => {
+  it('reports missing payload files from --doctor checks', () => {
     const { result, output } = collectDoctor({
-      runVersion: () => ({ status: 1, stdout: '', stderr: 'permission denied\n' }),
+      exists: (file) => !file.endsWith('check-tables.js'),
     });
 
     assert.equal(result, false);
-    assert.match(output, /oxfmt: \/tmp\/oxfmt \(permission denied\) \(version check failed\)/);
-    assert.match(output, /Ready: no/);
-  });
-
-  it('warns when oxfmt version exceeds tested maximum from --doctor checks', () => {
-    const { result, output } = collectDoctor({
-      runVersion: () => ({ status: 0, stdout: 'oxfmt 0.57.0\n', stderr: '' }),
-    });
-
-    assert.equal(result, true);
-    assert.match(output, new RegExp(`Version 0.57.0 exceeds tested maximum ${OXFMT_MAX_VERSION}`));
-    assert.match(output, /Ready: yes/);
-  });
-
-  it('isSupportedOxfmtVersion extracts semver from version strings', () => {
-    assert.deepStrictEqual(isSupportedOxfmtVersion('oxfmt 0.54.0\n'), { version: '0.54.0', supported: true });
-    assert.deepStrictEqual(isSupportedOxfmtVersion('Version: 0.54.0\n'), { version: '0.54.0', supported: true });
-    assert.deepStrictEqual(isSupportedOxfmtVersion('oxfmt 0.53.0\n'), { version: '0.53.0', supported: true });
-    assert.deepStrictEqual(isSupportedOxfmtVersion('oxfmt 0.57.0\n'), { version: '0.57.0', supported: false });
-    assert.equal(isSupportedOxfmtVersion('not a version'), null);
-  });
-
-  it('reports missing config and payload files from --doctor checks', () => {
-    const { result, output } = collectDoctor({
-      exists: (file) => !file.endsWith('.oxfmtrc.json') && !file.endsWith('check-tables.js'),
-    });
-
-    assert.equal(result, false);
-    assert.match(output, /Config: .*\.oxfmtrc\.json \(missing\)/);
-    assert.match(output, /Payload: .*\.oxfmtrc\.json \(missing\)/);
     assert.match(output, /Payload: .*check-tables\.js \(missing\)/);
     assert.match(output, /Ready: no/);
   });
