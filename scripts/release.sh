@@ -4,9 +4,12 @@
 #
 # Preconditions (checked before doing anything):
 #   1. Working tree is clean (no uncommitted changes)
-#   2. Tag doesn't already exist locally
+#   2. Tag doesn't already exist locally or remotely
 #   3. CHANGELOG.md has a "## v<VERSION>" section (already moved from Unreleased)
 #   4. gh CLI is authenticated and can reach the remote
+#   5. Release commit touches ONLY version-related files (isolated-bump rule)
+#   6. HEAD is pushed to origin (CI had a chance to run)
+#   7. CI is green on HEAD (or run in progress)
 #
 # What it does:
 #   1. Creates an annotated git tag v<VERSION> from package.json version
@@ -20,11 +23,21 @@
 #   - Working tree clean
 #   - CHANGELOG.md updated (entries moved from ## Unreleased to ## v<VERSION>)
 #   - Versions bumped in package.json, SKILL.md, README badge
+#   - Version-bump commit is isolated (no runtime changes mixed in)
+#   - CI green on the commit being tagged
 #   - gh authenticated (gh auth status)
 
 set -euo pipefail
 
 cd "$(git rev-parse --show-toplevel)"
+
+COLOR_RED='\033[0;31m'
+COLOR_YELLOW='\033[1;33m'
+COLOR_RESET='\033[0m'
+
+die()   { echo -e "${COLOR_RED}ERROR:${COLOR_RESET} $*" >&2; exit 1; }
+warn()  { echo -e "${COLOR_YELLOW}WARNING:${COLOR_RESET} $*" >&2; }
+info()  { echo "  $*"; }
 
 # ---------------------------------------------------------------------------
 # Read version
@@ -33,54 +46,167 @@ VERSION="$(node -p "require('./package.json').version")"
 TAG="v${VERSION}"
 
 echo "Preparing release ${TAG} ..."
+echo ""
 
 # ---------------------------------------------------------------------------
 # Precondition 1: clean working tree
 # ---------------------------------------------------------------------------
+info "Checking working tree ..."
 if [[ -n "$(git status --porcelain)" ]]; then
-  echo "ERROR: Uncommitted changes. Commit or stash them first." >&2
-  git status --short >&2
-  exit 1
+  die "Uncommitted changes. Commit or stash them first."
 fi
+echo "  ✓ Clean"
 
 # ---------------------------------------------------------------------------
 # Precondition 2: tag doesn't already exist locally or remotely
 # ---------------------------------------------------------------------------
+info "Checking tag ${TAG} ..."
 if git rev-parse "${TAG}" >/dev/null 2>&1; then
-  echo "ERROR: Tag ${TAG} already exists locally." >&2
-  exit 1
+  die "Tag ${TAG} already exists locally."
 fi
 if git ls-remote --exit-code --tags origin "refs/tags/${TAG}" >/dev/null 2>&1; then
-  echo "ERROR: Tag ${TAG} already exists on origin." >&2
-  exit 1
+  die "Tag ${TAG} already exists on origin."
 fi
+echo "  ✓ Tag available"
 
 # ---------------------------------------------------------------------------
 # Precondition 3: CHANGELOG has a versioned section (not still under Unreleased)
 # ---------------------------------------------------------------------------
+info "Checking CHANGELOG.md ..."
 if ! grep -q "^## ${TAG}$" CHANGELOG.md; then
-  echo "ERROR: CHANGELOG.md has no '## ${TAG}' section." >&2
-  echo "  Move entries from '## Unreleased' to '## ${TAG}' first." >&2
-  exit 1
+  die "CHANGELOG.md has no '## ${TAG}' section. Move entries from '## Unreleased' first."
 fi
 
-# Verify Unreleased is empty (optional — warn only)
+# Warn if Unreleased section has unshipped entries
 UNRELEASED_LINE="$(grep -n "^## Unreleased" CHANGELOG.md | head -1 | cut -d: -f1 || true)"
 NEXT_SECTION_LINE="$(grep -n "^## " CHANGELOG.md | awk -F: "\$1 > ${UNRELEASED_LINE:-0}" | head -1 | cut -d: -f1 || true)"
 if [[ -n "${UNRELEASED_LINE}" && -n "${NEXT_SECTION_LINE}" ]]; then
   GAP=$(( NEXT_SECTION_LINE - UNRELEASED_LINE ))
   if [[ "${GAP}" -gt 2 ]]; then
-    echo "WARNING: '## Unreleased' section has entries that will not be in this release." >&2
+    warn "'## Unreleased' section has entries that will not be in this release."
   fi
 fi
+echo "  ✓ Changelog ready"
 
 # ---------------------------------------------------------------------------
 # Precondition 4: gh CLI is authenticated
 # ---------------------------------------------------------------------------
+info "Checking gh auth ..."
 if ! gh auth status 2>&1 | grep -q "Logged in"; then
-  echo "ERROR: gh CLI is not authenticated. Run 'gh auth login' first." >&2
-  exit 1
+  die "gh CLI is not authenticated. Run 'gh auth login' first."
 fi
+echo "  ✓ Authenticated"
+
+# ---------------------------------------------------------------------------
+# Precondition 5: release commit is isolated (version-bump only)
+# ---------------------------------------------------------------------------
+info "Checking release commit isolation ..."
+
+# Files that are allowed to change in a release commit
+ALLOWED_RELEASE_FILES="^CHANGELOG\.md$|^package\.json$|^package-lock\.json$|^README\.md$|^skills/markdown-formatter/SKILL\.md$"
+
+# Get files changed in HEAD vs its parent
+PARENT_SHA="$(git rev-parse HEAD~1 2>/dev/null || true)"
+if [[ -z "${PARENT_SHA}" ]]; then
+  warn "No parent commit (root commit). Skipping isolation check."
+else
+  CHANGED_FILES="$(git diff --name-only HEAD~1 HEAD)"
+  if [[ -z "${CHANGED_FILES}" ]]; then
+    die "No files changed in HEAD (something is wrong)."
+  fi
+
+  VIOLATIONS=0
+  while IFS= read -r file; do
+    if ! echo "${file}" | grep -qE "${ALLOWED_RELEASE_FILES}"; then
+      echo "  ✗ ${file} (not a version-bump file)"
+      VIOLATIONS=$(( VIOLATIONS + 1 ))
+    fi
+  done <<< "${CHANGED_FILES}"
+
+  if [[ "${VIOLATIONS}" -gt 0 ]]; then
+    echo ""
+    die "Release commit changes ${VIOLATIONS} file(s) outside the version-bump allowlist.
+  Allowed: CHANGELOG.md, package.json, package-lock.json, README.md, skills/markdown-formatter/SKILL.md
+  Fix: 1. Commit runtime changes separately (not in the release commit)
+        2. Then make a clean version-bump commit with only the files above"
+  fi
+  echo "  ✓ Isolated (${VIOLATIONS} violations — all clean)"
+fi
+
+# ---------------------------------------------------------------------------
+# Precondition 6: HEAD is pushed to origin
+# ---------------------------------------------------------------------------
+info "Checking HEAD is on origin ..."
+LOCAL_HEAD="$(git rev-parse HEAD)"
+REMOTE_HEAD="$(git ls-remote origin HEAD 2>/dev/null | awk '{print $1}' || true)"
+if [[ "${LOCAL_HEAD}" != "${REMOTE_HEAD}" ]]; then
+  die "HEAD (${LOCAL_HEAD}) is not the same as origin/HEAD (${REMOTE_HEAD:-none}).
+  Push the commit first so CI can run, then run release.sh again."
+fi
+echo "  ✓ Pushed (origin/HEAD matches local HEAD)"
+
+# ---------------------------------------------------------------------------
+# Precondition 7: CI is green on HEAD
+# ---------------------------------------------------------------------------
+info "Checking CI status for $(git rev-parse --short HEAD) ..."
+
+# Get the latest CI workflow run for this commit
+CI_RUN="$(
+  gh run list \
+    --commit HEAD \
+    --json databaseId,name,status,conclusion,createdAt \
+    --jq '.[0] // empty' 2>/dev/null || true
+)"
+
+if [[ -z "${CI_RUN}" ]]; then
+  die "No CI run found for HEAD. CI must complete (green) before releasing.
+  Fix: Wait for the initial run, or push a new commit to trigger CI.
+  Bypass with: SKIP_CI_CHECK=1 bash scripts/release.sh"
+fi
+
+CI_STATUS="$(echo "${CI_RUN}" | jq -r '.status // "unknown"')"
+CI_CONCLUSION="$(echo "${CI_RUN}" | jq -r '.conclusion // "unknown"')"
+CI_NAME="$(echo "${CI_RUN}" | jq -r '.name // "CI"')"
+CI_ID="$(echo "${CI_RUN}" | jq -r '.databaseId // "?"')"
+
+if [[ "${CI_STATUS}" == "in_progress" ]] || [[ "${CI_STATUS}" == "queued" ]] || [[ "${CI_STATUS}" == "waiting" ]]; then
+  echo "  ⏳ ${CI_NAME} (run ${CI_ID}) is ${CI_STATUS} — waiting for completion ..."
+  # Wait with incremental prompts up to 10 minutes
+  for i in $(seq 1 60); do
+    sleep 10
+    CI_RUN="$(
+      gh run list \
+        --commit HEAD \
+        --json databaseId,name,status,conclusion,createdAt \
+        --jq '.[0] // empty' 2>/dev/null || true
+    )"
+    CI_STATUS="$(echo "${CI_RUN}" | jq -r '.status // "unknown"')"
+    CI_CONCLUSION="$(echo "${CI_RUN}" | jq -r '.conclusion // "unknown"')"
+    if [[ "${CI_STATUS}" == "completed" ]]; then
+      break
+    fi
+    if (( i % 6 == 0 )); then
+      echo "  ... still waiting (${CI_STATUS}) after $(( i * 10 ))s"
+    fi
+  done
+fi
+
+if [[ "${CI_STATUS}" != "completed" ]]; then
+  die "CI did not complete within the timeout window.
+  Run 'gh run watch ${CI_ID}' manually, then retry.
+  Bypass with: SKIP_CI_CHECK=1 bash scripts/release.sh"
+fi
+
+if [[ "${CI_CONCLUSION}" != "success" ]]; then
+  die "CI run ${CI_ID} (${CI_NAME}) concluded as '${CI_CONCLUSION}', not 'success'.
+  Fix the failure before releasing.
+  Bypass with: SKIP_CI_CHECK=1 bash scripts/release.sh"
+fi
+echo "  ✓ CI passed (${CI_NAME} run ${CI_ID})"
+
+echo ""
+echo "All preconditions passed. Proceeding with release ..."
+echo ""
 
 # ---------------------------------------------------------------------------
 # Create annotated tag

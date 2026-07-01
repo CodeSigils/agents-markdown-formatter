@@ -261,7 +261,8 @@ repository documentation, but those changes should not be treated as a runtime r
 Recommended release practice:
 
 1. Do not force-move a published tag.
-2. Keep runtime changes and repository-only maintenance clearly separated.
+2. Keep runtime changes and version bumps in separate commits (see [AGENTS.md](AGENTS.md#release-cycle-policy) for the
+   isolated-bump rule).
 3. Before tagging a runtime release, verify the exact commit with:
 
    ```bash
@@ -273,20 +274,24 @@ Recommended release practice:
    npm run format:check
    ```
 
-4. Confirm GitHub Actions is green on the commit being tagged.
+4. Push the version-bump commit to main and **confirm GitHub Actions is green** before proceeding. The release script
+   enforces this precondition.
 5. Run the release script (requires `gh` CLI authenticated):
 
    ```bash
    npm run release
    ```
 
-   The script reads the version from `package.json`, validates preconditions (clean tree, CHANGELOG section exists, tag
-   is new locally and remotely, `gh` authenticated), creates an annotated tag, pushes HEAD and the tag to origin, then
-   publishes the GitHub Release with the matching CHANGELOG section as body. If the release must be aborted after
-   tagging, run `git tag -d vX.Y.Z` locally and delete the remote tag before fixing.
+   The script reads the version from `package.json`, validates 7 preconditions (clean tree, tag uniqueness, CHANGELOG
+   section exists, gh authenticated, commit isolation — only version-related files changed — HEAD pushed to origin, CI
+   green), creates an annotated tag, pushes HEAD and the tag to origin, then publishes the GitHub Release with the
+   matching CHANGELOG section as body. CI not yet green or mixed-in runtime changes will block with a clear error.
+   Bypass in emergency: `SKIP_CI_CHECK=1 bash scripts/release.sh`.
 
 6. Verify CI passes for the tag push.
-7. Avoid expanding scope during release cleanup; use follow-up issues for new Markdown dialects, embedded-code
+7. If the release must be aborted after tagging, run `git tag -d vX.Y.Z` locally and delete the remote tag before
+   fixing.
+8. Avoid expanding scope during release cleanup; use follow-up issues for new Markdown dialects, embedded-code
    formatting, or broader configuration systems.
 
 ## Agent contract

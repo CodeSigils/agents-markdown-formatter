@@ -97,3 +97,74 @@ Treat drift severity as:
 For the post-overhaul read-only audit, return concise findings grouped by the same severity levels with concrete
 evidence. Check coding/structure standards, release-boundary drift, documentation consistency, package/CI paths, and
 staged runtime payload boundaries.
+
+## Release cycle policy
+
+Release follows a strict two-phase process to prevent runtime changes from leaking into version bumps and to ensure CI
+confirmation before tagging.
+
+### Phase 1: accumulate
+
+Runtime changes (features, fixes, refactors, test changes, fixture additions, CI changes) land on `main` through normal
+commits or PRs. Each commit should be a focused unit — one concern per commit. Accumulate as many runtime changes as
+needed.
+
+### Phase 2: cut release
+
+Release cutting is a separate, focused action with its own commit. The release commit must be the **only** commit that
+touches version metadata.
+
+**Isolated-bump rule:** The release commit MUST NOT contain runtime code changes. Only these files are allowed in the
+release commit:
+
+- `CHANGELOG.md` — move entries from `## Unreleased` to `## v<X.Y.Z>`
+- `package.json` — bump version
+- `package-lock.json` — updated by `npm version`
+- `README.md` — badge version, release posture line
+- `skills/markdown-formatter/SKILL.md` — YAML frontmatter version field
+
+If a runtime file needs a change, commit it separately **before** the release commit. The release script enforces this
+via `git diff --name-only HEAD~1 HEAD`.
+
+**CI-first rule:** Do not tag until CI is green on the release commit. The release script checks this via
+`gh run list --commit HEAD`. It will wait for in-progress runs (up to 10 minutes) and reject on failure. To bypass in an
+emergency: `SKIP_CI_CHECK=1 bash scripts/release.sh`.
+
+**Release sequence:**
+
+```
+1. Create a focused version-bump commit (only the 5 allowed files above)
+2. Push to main (triggers CI)
+3. Wait for CI to complete (green)
+4. Run: bash scripts/release.sh
+   (enforces: clean tree, tag availability, changelog ready, gh auth,
+    commit isolation, HEAD pushed, CI green)
+5. Verify CI passes for the tag push
+```
+
+### Examples
+
+```
+# ❌ Wrong: runtime changes mixed with version bump
+git commit -m "bump to v1.1.0"
+# but also changes src/index.js, scripts/*.js
+# release.sh rejects: "Release commit changes N file(s)
+# outside the version-bump allowlist"
+
+# ✅ Right: separate commits
+git commit -m "fix: block inline-code table pipes before oxfmt"       # runtime change
+git commit -m "chore: bump version to v1.1.0"                         # version bump only
+# push, wait for CI green, then:
+bash scripts/release.sh
+```
+
+```
+# ❌ Wrong: tag before CI confirms
+git tag v1.1.0 && git push --tags
+# CI may fail — now there's a tag pointing at a broken commit
+
+# ✅ Right: let CI gate the release
+git push origin HEAD:main                 # triggers CI
+# ... wait for CI green ...
+bash scripts/release.sh                   # tags, pushes, creates release
+```
