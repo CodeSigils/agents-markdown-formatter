@@ -66,6 +66,20 @@ function collectFiles(targets) {
 function runCheck(check, file) {
   const scriptPath = join(SKILL_DIR, 'scripts', `${check.name}.js`);
   const result = spawnSync(process.execPath, [scriptPath, ...check.args, file], { encoding: 'utf8' });
+  if (result.error) {
+    return {
+      ok: false,
+      stdout: result.stdout || '',
+      stderr: `Failed to run ${check.name}.js: ${result.error.message}\n${result.stderr || ''}`,
+    };
+  }
+  if (result.signal) {
+    return {
+      ok: false,
+      stdout: result.stdout || '',
+      stderr: `${check.name}.js exited from signal: ${result.signal}\n${result.stderr || ''}`,
+    };
+  }
   return {
     ok: result.status === 0,
     stdout: result.stdout || '',

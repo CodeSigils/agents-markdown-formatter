@@ -108,6 +108,21 @@ describe('check-structure.js unit tests', () => {
       assert.deepStrictEqual(tables, []);
       assert.deepStrictEqual(validateStructure(content), []);
     });
+
+    it('should stop table extraction before immediate Markdown block boundaries with pipes', async () => {
+      const content = [
+        '| Name | Value |',
+        '| ---- | ----- |',
+        '| A | B |',
+        '# Heading | with | pipe',
+        '- item | with | pipe',
+      ].join('\n');
+      const tables = extractTables(content);
+
+      assert.strictEqual(tables.length, 1);
+      assert.strictEqual(tables[0].rows.length, 1);
+      assert.deepStrictEqual(validateStructure(content), []);
+    });
   });
 
   describe('buildSnapshot function', () => {

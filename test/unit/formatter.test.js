@@ -9,6 +9,7 @@ const {
   runDoctor,
   resolveInputFiles,
   repairTableColumns,
+  normalizeTableSpacing,
   auditTables,
   hasTableWithEmptyCells,
 } = require('../../skills/markdown-formatter/src/index.js');
@@ -221,6 +222,18 @@ describe('repairTableColumns', () => {
     assert.equal(repairTableColumns(input), input);
   });
 
+  it('does not repair immediate Markdown block boundaries with pipes as table rows', () => {
+    const input = [
+      '| a | b |',
+      '|---|---|',
+      '# Heading | with | pipe',
+      '- item | with | pipe',
+      '> quote | with | pipe',
+    ].join('\n');
+
+    assert.equal(repairTableColumns(input), input);
+  });
+
   it('pads multiple data rows in the same table', () => {
     const input = [
       '| a | b | c |',
@@ -390,5 +403,29 @@ describe('hasTableWithEmptyCells', () => {
     const input = '# T\n\n|| A | B ||\n|| --- | --- ||\n|| 1 | 2 ||\n';
 
     assert.equal(hasTableWithEmptyCells(input), true);
+  });
+});
+
+describe('normalizeTableSpacing', () => {
+  it('normalizes only detected table blocks', () => {
+    const input = [
+      '| A | B |',
+      '|---|---|',
+      '|   | x |',
+      '',
+      'Literal:',
+      '|raw|pipe|line|',
+      '',
+    ].join('\n');
+
+    assert.equal(normalizeTableSpacing(input), [
+      '| A | B |',
+      '| --- | --- |',
+      '| | x |',
+      '',
+      'Literal:',
+      '|raw|pipe|line|',
+      '',
+    ].join('\n'));
   });
 });

@@ -25,7 +25,7 @@
 "use strict";
 
 const { readFileSync, writeFileSync, existsSync } = require("fs");
-const { splitTableCells, isPotentialTableRow, isDelimiterLine, getFenceBoundary } = require("./check-tables.js");
+const { splitTableCells, splitTableCellsForStyle, isPotentialTableRow, isTableBodyRowForStyle, isDelimiterLine, getFenceBoundary } = require("./check-tables.js");
 
 const VALID_MODES = ["--snapshot", "--check", "--guard", "--verify"];
 
@@ -81,8 +81,10 @@ function extractFences(content) {
   return fences;
 }
 
-function parseTableRow(line) {
-  const cells = splitTableCells(line);
+function parseTableRow(line, hasOuterPipes = true) {
+  const cells = hasOuterPipes
+    ? splitTableCells(line)
+    : splitTableCellsForStyle(line, false);
   return { cells, colCount: cells.length };
 }
 
@@ -101,13 +103,14 @@ function extractTables(content) {
 
     if (!isPotentialTableRow(lines[i]) || !isDelimiterLine(lines[i + 1])) continue;
 
-    const header = parseTableRow(lines[i]);
-    const delimiter = parseTableRow(lines[i + 1]);
+    const hasOuterPipes = lines[i].trimStart().startsWith("|") || lines[i + 1].trimStart().startsWith("|");
+    const header = parseTableRow(lines[i], hasOuterPipes);
+    const delimiter = parseTableRow(lines[i + 1], hasOuterPipes);
     const rows = [];
 
     let j = i + 2;
-    while (j < lines.length && isPotentialTableRow(lines[j]) && !isDelimiterLine(lines[j])) {
-      rows.push(parseTableRow(lines[j]));
+    while (j < lines.length && isTableBodyRowForStyle(lines[j], hasOuterPipes)) {
+      rows.push(parseTableRow(lines[j], hasOuterPipes));
       j++;
     }
 

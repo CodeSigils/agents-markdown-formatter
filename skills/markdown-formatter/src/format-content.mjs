@@ -4,6 +4,7 @@ const require = createRequire(import.meta.url);
 const {
   splitTableCellsForStyle,
   isPotentialTableRow,
+  isTableBodyRowForStyle,
   isDelimiterLine,
   getFenceBoundary,
 } = require("../scripts/check-tables.js");
@@ -49,10 +50,11 @@ function splitTableBlock(lines, start) {
   const header = lines[start];
   const delimiter = lines[start + 1];
   if (!delimiter || !isPotentialTableRow(header) || !isDelimiterLine(delimiter)) return null;
+  const hasOuterPipes = header.trimStart().startsWith("|") || delimiter.trimStart().startsWith("|");
 
   const rows = [header, delimiter];
   let end = start + 2;
-  while (end < lines.length && isPotentialTableRow(lines[end]) && !isDelimiterLine(lines[end])) {
+  while (end < lines.length && isTableBodyRowForStyle(lines[end], hasOuterPipes)) {
     rows.push(lines[end]);
     end++;
   }

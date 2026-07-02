@@ -20,16 +20,50 @@ const FORMAT_FILES = require("./format-files-list");
 const ROOT = resolve(__dirname, "..");
 const CLI = resolve(ROOT, "skills/markdown-formatter/src/index.js");
 
-const flag = process.argv[2];
-if (!flag) {
-  console.error("Usage: node scripts/format-files.js <--fix|--check|--verify>");
-  process.exit(2);
+function runFormatFiles(argv = process.argv.slice(2), options = {}) {
+  const {
+    spawn = spawnSync,
+    nodePath = process.execPath,
+    cli = CLI,
+    formatFiles = FORMAT_FILES,
+    cwd = ROOT,
+    stderr = process.stderr,
+  } = options;
+
+  const flag = argv[0];
+  if (!flag) {
+    stderr.write("Usage: node scripts/format-files.js <--fix|--check|--verify>\n");
+    return 2;
+  }
+
+  const result = spawn(nodePath, [cli, flag, ...formatFiles], {
+    cwd,
+    encoding: "utf8",
+    stdio: "inherit",
+  });
+
+  if (result.error) {
+    stderr.write(`format-files failed to run formatter: ${result.error.message}\n`);
+    return 1;
+  }
+
+  if (result.signal) {
+    stderr.write(`format-files formatter process exited from signal: ${result.signal}\n`);
+    return 1;
+  }
+
+  return typeof result.status === "number" ? result.status : 1;
 }
 
-const result = spawnSync(process.execPath, [CLI, flag, ...FORMAT_FILES], {
-  cwd: ROOT,
-  encoding: "utf8",
-  stdio: "inherit",
-});
+function main(argv = process.argv.slice(2)) {
+  process.exitCode = runFormatFiles(argv);
+}
 
-process.exit(result.status || 0);
+module.exports = {
+  runFormatFiles,
+  main,
+};
+
+if (require.main === module) {
+  main();
+}

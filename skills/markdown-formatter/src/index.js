@@ -28,7 +28,7 @@ const { join, resolve, extname, basename } = require("path");
 const { tmpdir } = require("os");
 
 const { formatContent } = require("./format-content.mjs");
-const { splitTableCells, splitTableCellsForStyle, isPotentialTableRow, isDelimiterLine, getFenceBoundary, hasUnclosedFence, tableRowHasInlineCodePipe, validateTables } = require('../scripts/check-tables.js');
+const { splitTableCells, splitTableCellsForStyle, isPotentialTableRow, isTableBodyRowForStyle, isDelimiterLine, getFenceBoundary, hasUnclosedFence, tableRowHasInlineCodePipe, validateTables } = require('../scripts/check-tables.js');
 const { detectAdjacentPipes, validatePipes } = require('../scripts/check-pipes.js');
 const { validateFences } = require('../scripts/check-fences.js');
 const { buildSnapshot, validateStructure, loadSnapshot, saveSnapshot, compareSnapshots } = require('../scripts/check-structure.js');
@@ -269,6 +269,7 @@ function repairTableColumns(content) {
 
     const headerCols = splitTableCells(header).length;
     const delimiterCols = splitTableCells(delimiter).length;
+    const hasOuterPipes = header.trimStart().startsWith("|") || delimiter.trimStart().startsWith("|");
     const targetCols = Math.max(headerCols, delimiterCols);
 
     if (targetCols <= 1) continue;            // not a real table
@@ -278,8 +279,8 @@ function repairTableColumns(content) {
       let j = i + 2;
       while (j < lines.length) {
         const dataLine = lines[j];
-        const dataCols = splitTableCells(dataLine).length;
-        if (dataCols <= 1) break;
+        if (!isTableBodyRowForStyle(dataLine, hasOuterPipes)) break;
+        const dataCols = splitTableCellsForStyle(dataLine, hasOuterPipes).length;
         if (dataCols < targetCols) { anyShort = true; break; }
         j++;
       }
@@ -308,8 +309,8 @@ function repairTableColumns(content) {
     let j = i + 2;
     while (j < lines.length) {
       const dataLine = lines[j];
-      const dataCols = splitTableCells(dataLine).length;
-      if (dataCols <= 1) break;
+      if (!isTableBodyRowForStyle(dataLine, hasOuterPipes)) break;
+      const dataCols = splitTableCellsForStyle(dataLine, hasOuterPipes).length;
 
       if (dataCols < targetColsFinal) {
         const missing = targetColsFinal - dataCols;
@@ -408,7 +409,7 @@ function normalizeTableSpacing(content) {
   let currentFence = null;
   let modified = false;
 
-  for (let i = 0; i < lines.length; i++) {
+  for (let i = 0; i < lines.length - 1; i++) {
     const fenceBoundary = getFenceBoundary(lines[i], currentFence);
     if (fenceBoundary !== null) {
       currentFence = fenceBoundary || null;
@@ -416,25 +417,36 @@ function normalizeTableSpacing(content) {
     }
     if (currentFence) continue;
 
-    const trimmed = lines[i].trim();
-    if (!trimmed.startsWith("|") || !trimmed.endsWith("|")) continue;
+    if (!isPotentialTableRow(lines[i]) || !isDelimiterLine(lines[i + 1])) continue;
+    const hasOuterPipes = lines[i].trimStart().startsWith("|") || lines[i + 1].trimStart().startsWith("|");
 
-    const cells = splitTableCells(lines[i]);
-    if (cells.length <= 1) continue;
+    let end = i + 2;
+    while (end < lines.length && isTableBodyRowForStyle(lines[end], hasOuterPipes)) end++;
+    if (!hasOuterPipes) {
+      i = end - 1;
+      continue;
+    }
 
-    // Reconstruct with consistent spacing: | cell | cell | cell |
-    // Empty cells get a single space; non-empty cells get space + content + space
-    const normalized = "|"
-      + cells.map((c) => {
+    for (let rowIndex = i; rowIndex < end; rowIndex++) {
+      if (!lines[rowIndex].trim().startsWith("|") || !lines[rowIndex].trim().endsWith("|")) continue;
+      const cells = splitTableCells(lines[rowIndex]);
+      if (cells.length <= 1) continue;
+
+      // Reconstruct with consistent spacing: | cell | content |
+      const normalized = "|"
+        + cells.map((c) => {
           if (c === "") return " ";
           return " " + c + " ";
         }).join("|")
-      + "|";
+        + "|";
 
-    if (normalized !== lines[i]) {
-      lines[i] = normalized;
-      modified = true;
+      if (normalized !== lines[rowIndex]) {
+        lines[rowIndex] = normalized;
+        modified = true;
+      }
     }
+
+    i = end - 1;
   }
 
   return modified ? lines.join("\n") : content;
@@ -446,8 +458,7 @@ function tableHasEmptyCells(lines, startIndex) {
   const hasOuterPipes = header.trim().startsWith("|") || delimiter.trim().startsWith("|");
 
   for (let j = startIndex; j < lines.length; j++) {
-    if (j > startIndex + 1 && isDelimiterLine(lines[j])) break;
-    if (j > startIndex + 1 && !isPotentialTableRow(lines[j]) && !lines[j].includes("|")) break;
+    if (j > startIndex + 1 && !isTableBodyRowForStyle(lines[j], hasOuterPipes)) break;
     const cells = splitTableCellsForStyle(lines[j], hasOuterPipes);
     if (cells.some((cell) => cell.trim() === "")) return true;
   }
@@ -506,11 +517,11 @@ function auditTables(content, label = "<input>") {
     tableCount++;
     const headerCols = splitTableCells(lines[i]).length;
     const delimiterCols = splitTableCells(lines[i + 1]).length;
+    const hasOuterPipes = lines[i].trimStart().startsWith("|") || lines[i + 1].trimStart().startsWith("|");
     output.push(`line ${i + 1}: table start header-cells=${headerCols} delimiter-cells=${delimiterCols}`);
 
-    for (let j = i; j < lines.length && isPotentialTableRow(lines[j]); j++) {
-      if (j > i + 1 && isDelimiterLine(lines[j])) break;
-      const cells = splitTableCells(lines[j]);
+    for (let j = i; j < lines.length && (j <= i + 1 || isTableBodyRowForStyle(lines[j], hasOuterPipes)); j++) {
+      const cells = splitTableCellsForStyle(lines[j], hasOuterPipes);
       const hazards = [];
       const adjacent = detectAdjacentPipes(lines[j]);
       if (adjacent.length > 0) hazards.push("adjacent-pipes");

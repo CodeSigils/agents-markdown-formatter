@@ -464,6 +464,63 @@ describe('markdown formatter CLI integration', () => {
     }
   });
 
+  it('--fix does not absorb immediate Markdown block boundaries with pipes into tables', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'markdown-formatter-block-boundary-'));
+    const file = join(dir, 'boundary.md');
+    try {
+      const original = [
+        '# Boundary',
+        '',
+        '| A | B |',
+        '|---|---|',
+        '# Heading | with | pipe',
+        '- item | with | pipe',
+        '> quote | with | pipe',
+        '',
+      ].join('\n');
+      writeFileSync(file, original);
+
+      const result = runCli(['--fix', file]);
+
+      assert.equal(result.status, 0, result.stdout + result.stderr);
+      const content = readFileSync(file, 'utf8');
+      assert.match(content, /\| A\s+\| B\s+\|/);
+      assert.match(content, /^# Heading \| with \| pipe$/m);
+      assert.match(content, /^- item \| with \| pipe$/m);
+      assert.match(content, /^> quote \| with \| pipe$/m);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it('--fix empty-cell table spacing does not normalize unrelated pipe-delimited lines', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'markdown-formatter-empty-scope-'));
+    const file = join(dir, 'empty-scope.md');
+    try {
+      const original = [
+        '# Empty Scope',
+        '',
+        '| A | B |',
+        '|---|---|',
+        '|   | x |',
+        '',
+        'Literal:',
+        '|raw|pipe|line|',
+        '',
+      ].join('\n');
+      writeFileSync(file, original);
+
+      const result = runCli(['--fix', file]);
+
+      assert.equal(result.status, 0, result.stdout + result.stderr);
+      const content = readFileSync(file, 'utf8');
+      assert.match(content, /^\| --- \| --- \|$/m);
+      assert.match(content, /^\|raw\|pipe\|line\|$/m);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
   it('--fix preserves no-leading-pipe table empty edge cells by skipping formatter', () => {
     const dir = mkdtempSync(join(tmpdir(), 'markdown-formatter-nolead-empty-'));
     const file = join(dir, 'empty-edge.md');

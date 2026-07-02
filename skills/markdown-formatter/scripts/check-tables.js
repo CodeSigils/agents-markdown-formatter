@@ -101,6 +101,27 @@ function isPotentialTableRow(line) {
   return splitTableCells(line).length > 1 || (trimmed.startsWith("|") && trimmed.endsWith("|") && pipeCount >= 2);
 }
 
+function isMarkdownBlockBoundary(line) {
+  const trimmed = line.trimStart();
+  return /^(#{1,6}\s|[-+*]\s+|\d+[.)]\s+|>\s?)/.test(trimmed);
+}
+
+function isTableBodyRow(line) {
+  if (!isPotentialTableRow(line) || isDelimiterLine(line)) return false;
+  if (line.trimStart().startsWith("|")) return true;
+  return !isMarkdownBlockBoundary(line);
+}
+
+function isTableBodyRowForStyle(line, hasOuterPipes = true) {
+  if (isDelimiterLine(line)) return false;
+  const potential = hasOuterPipes
+    ? isPotentialTableRow(line)
+    : splitTableCellsForStyle(line, hasOuterPipes).length > 1;
+  if (!potential) return false;
+  if (!line.trimStart().startsWith("|") && isMarkdownBlockBoundary(line)) return false;
+  return true;
+}
+
 /**
  * Check if a GFM table row has an unescaped | inside an inline code span.
  *
@@ -243,6 +264,7 @@ function validateTables(content) {
 
     const headerCols = splitTableCells(header).length;
     const delimiterCols = splitTableCells(delimiter).length;
+    const hasOuterPipes = header.trimStart().startsWith("|") || delimiter.trimStart().startsWith("|");
 
     if (tableRowHasInlineCodePipe(header)) {
       errors.push(`Line ${i + 1}: inline code span contains unescaped pipe; formatter would split it as a table column`);
@@ -253,9 +275,8 @@ function validateTables(content) {
     }
 
     let rowIndex = 1;
-    for (let j = i + 2; j < lines.length && isPotentialTableRow(lines[j]); j++) {
-      if (isDelimiterLine(lines[j])) break;
-      const dataCols = splitTableCells(lines[j]).length;
+    for (let j = i + 2; j < lines.length && isTableBodyRowForStyle(lines[j], hasOuterPipes); j++) {
+      const dataCols = splitTableCellsForStyle(lines[j], hasOuterPipes).length;
       if (tableRowHasInlineCodePipe(lines[j])) {
         errors.push(`Line ${j + 1}: inline code span contains unescaped pipe; formatter would split it as a table column`);
       }
@@ -302,6 +323,9 @@ module.exports = {
   splitTableCells,
   splitTableCellsForStyle,
   isPotentialTableRow,
+  isMarkdownBlockBoundary,
+  isTableBodyRow,
+  isTableBodyRowForStyle,
   isDelimiterLine,
   getFenceBoundary,
   hasUnclosedFence,

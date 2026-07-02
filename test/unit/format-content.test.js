@@ -78,6 +78,26 @@ describe('format-content micro-formatter', () => {
     assert.equal(alignTables(input), input);
   });
 
+  it('does not absorb immediate Markdown block boundaries with pipes into tables', () => {
+    const input = [
+      '| A | B |',
+      '|---|---|',
+      '# Heading | with | pipe',
+      '- item | with | pipe',
+      '> quote | with | pipe',
+      '',
+    ].join('\n');
+
+    assert.equal(alignTables(input), [
+      '| A   | B   |',
+      '| --- | --- |',
+      '# Heading | with | pipe',
+      '- item | with | pipe',
+      '> quote | with | pipe',
+      '',
+    ].join('\n'));
+  });
+
   it('normalizes tilde fences and escalates backticks for nested content', () => {
     const input = ['~~~~md', '```text', 'inner', '```', '~~~~', ''].join('\n');
 

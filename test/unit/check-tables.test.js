@@ -62,6 +62,23 @@ describe('check-tables.js unit tests', () => {
     assert.deepStrictEqual(validateTables(content), []);
   });
 
+  it('stops table validation before immediate Markdown block boundaries with pipes', () => {
+    for (const boundary of [
+      '# Heading | with | pipe',
+      '- item | with | pipe',
+      '> quote | with | pipe',
+    ]) {
+      const content = [
+        '| Name | Value |',
+        '| ---- | ----- |',
+        '| A | B |',
+        boundary,
+      ].join('\n');
+
+      assert.deepStrictEqual(validateTables(content), [], boundary);
+    }
+  });
+
   it('detects literal fence markers inside table cells as column drift risk', () => {
     const errors = validateTables('| Example | Notes |\n| --- | --- |\n| ```bash | do not put fence markers in table cells |\n');
 
