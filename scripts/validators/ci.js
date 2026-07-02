@@ -5,7 +5,7 @@
  * Checks ci.yml for structural anti-patterns and required steps.
  */
 
-const { read } = require("./common");
+const { read, extractNodeVersionFile } = require("./common");
 
 function validateCi(files) {
   const errors = [];
@@ -48,9 +48,9 @@ function validateCi(files) {
   }
 
   // .node-version alignment
-  const nodeVersionFile = read(".node-version");
-  const ciNodeVersion = nodeVersionFile
-    ? read && extractNodeVersionFileFromContent(nodeVersionFile)
+  const nodeVersionContent = read(".node-version");
+  const ciNodeVersion = nodeVersionContent
+    ? extractNodeVersionFile(nodeVersionContent)
     : null;
   if (!ciNodeVersion) {
     errors.push(".node-version is missing or unreadable");
@@ -60,11 +60,6 @@ function validateCi(files) {
   }
 
   return { errors, warnings };
-}
-
-function extractNodeVersionFileFromContent(content) {
-  const m = content.trim().match(/^(?:v)?(\d+)(?:\.\d+\.\d+)?$/);
-  return m ? Number(m[1]) : null;
 }
 
 module.exports = { validateCi };
