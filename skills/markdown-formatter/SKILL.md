@@ -1,6 +1,6 @@
 ---
 name: markdown-formatter
-description: "AI-agent-safe GFM and MDX Markdown formatter with structural guards"
+description: "Zero-dependency GFM and MDX formatter skill for AI-agent-authored Markdown, with table, pipe, and fence guards"
 version: "1.2.0"
 author: "CodeSigils"
 license: "MIT"
@@ -9,10 +9,15 @@ metadata.hermes.tags:
   - markdown
   - formatter
   - gfm
+  - github-flavored-markdown
   - mdx
   - ai-agents
+  - agent-tools
+  - hermes-skill
   - documentation
   - guardrails
+  - tables
+  - fenced-code-blocks
 ---
 
 ## Scope

@@ -1,8 +1,31 @@
 {
   "name": "agents-markdown-formatter",
   "version": "1.2.0",
-  "description": "AI-agent-safe GFM and MDX Markdown formatter with structural guards",
+  "description": "Zero-dependency GFM and MDX formatter skill for AI-agent-authored Markdown, with table, pipe, and fence guards",
   "private": true,
+  "keywords": [
+    "markdown",
+    "markdown-formatter",
+    "gfm",
+    "github-flavored-markdown",
+    "mdx",
+    "ai-agents",
+    "agent-tools",
+    "hermes-skill",
+    "documentation",
+    "formatter",
+    "guardrails",
+    "tables",
+    "fenced-code-blocks"
+  ],
+  "homepage": "https://github.com/CodeSigils/agents-markdown-formatter#readme",
+  "bugs": {
+    "url": "https://github.com/CodeSigils/agents-markdown-formatter/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/CodeSigils/agents-markdown-formatter.git"
+  },
   "scripts": {
     "test": "node scripts/check-all.js && node --test test/unit/*.test.js && node test/integration/cli.test.js && node scripts/check-consistency.js",
     "test:structural": "node scripts/check-all.js",

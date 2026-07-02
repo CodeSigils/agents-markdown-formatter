@@ -1,20 +1,40 @@
-# Dependencies and generated artifacts
+# Dependencies
 node_modules/
+
+# Build, coverage, and generated artifacts
 coverage/
 dist/
+build/
+tmp/
+.tmp/
 *.log
 *.snap
 *.structure.json
 
+# Package manager and runtime noise
+.npm/
+.pnpm-store/
+.yarn/
+.cache/
+
 # Agent/tool local state
+.agents/
+.codex/
 .omo/
 .open-mem/
 .opencode/
 
+# OS and editor files
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+.vscode/
+.idea/
+
 # Formatter work dirs
 fixtures/work/
 fixtures/results/
-.tmp/
 
 # Staged install verification output
 staged-install/

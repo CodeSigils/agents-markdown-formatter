@@ -3,7 +3,7 @@
 [![v1.2.0](https://img.shields.io/badge/version-1.2.0-blue.svg)](skills/markdown-formatter/SKILL.md)
 [![CI](https://github.com/CodeSigils/agents-markdown-formatter/actions/workflows/ci.yml/badge.svg)](https://github.com/CodeSigils/agents-markdown-formatter/actions/workflows/ci.yml)
 
-Deterministic Markdown formatting for AI-agent-authored docs.
+Zero-dependency GFM and MDX formatting for AI-agent-authored Markdown, with table, pipe, and fence guards.
 
 This repository builds a Hermes-compatible GitHub-Flavored Markdown (GFM) and MDX formatter skill. The formatter is a
 zero-dependency Node.js module that normalizes Markdown container syntax and leaves fenced code content opaque. Guard
