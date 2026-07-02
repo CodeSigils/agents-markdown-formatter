@@ -77,7 +77,7 @@ Where `<skill-dir>` is the repository checkout (`skills/markdown-formatter/`) or
 
 ## Prerequisites
 
-- `node` (>=20)
+- `node` (>=24)
 
 Run `--doctor` to verify runtime readiness.
 

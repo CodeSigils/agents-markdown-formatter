@@ -514,6 +514,28 @@ describe('markdown formatter CLI integration', () => {
     }
   });
 
+  it('--dry-run remains read-only when an unclosed fence is present', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'markdown-formatter-unclosed-dry-run-'));
+    const file = join(dir, 'unclosed-dry-run.md');
+    try {
+      const original = '# Unclosed fence test\n\n\t- item\n\n```js\nconst x = 1;\n';
+      writeFileSync(file, original);
+
+      const dryRunResult = runCli(['--dry-run', file]);
+      assert.equal(dryRunResult.status, 0, dryRunResult.stdout + dryRunResult.stderr);
+      assert.match(dryRunResult.stdout + dryRunResult.stderr, /Would format/);
+      assert.equal(readFileSync(file, 'utf8'), original);
+
+      const guardDryRunResult = runCli(['--guard', '--dry-run', file]);
+      assert.equal(guardDryRunResult.status, 0, guardDryRunResult.stdout + guardDryRunResult.stderr);
+      assert.match(guardDryRunResult.stdout + guardDryRunResult.stderr, /Would format/);
+      assert.equal(readFileSync(file, 'utf8'), original);
+      assert.equal(existsSync(`${file}.structure.json`), false);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
   it('--validate warns on long fence containing GFM table structure', () => {
     const content = '```\n' + Array(42).fill('line content').join('\n') + '\n| Name | Value |\n| ---- | ----- |\n| A | B |\n```\n';
     const dir = mkdtempSync(join(tmpdir(), 'markdown-formatter-long-fence-'));

@@ -18,7 +18,7 @@
  *   --no-repair  In write modes, report repairable table issues instead of modifying them
  *   --help       Show this help
  *
- * Prerequisites: Node.js >=20.
+ * Prerequisites: Node.js >=24.
  */
 
 "use strict";
@@ -35,7 +35,7 @@ const { buildSnapshot, validateStructure, loadSnapshot, saveSnapshot, compareSna
 
 const SKILL_DIR = resolve(__dirname, "..");
 const FORMATTER_MODULE = join(SKILL_DIR, "src", "format-content.mjs");
-const NODE_RUNTIME_MIN_VERSION = 20;
+const NODE_RUNTIME_MIN_VERSION = 24;
 const LONG_FLAGS = new Set(["check", "fix", "all", "guard", "verify", "fences", "validate", "doctor", "dry-run", "audit-tables", "no-repair", "help"]);
 const SHORT_FLAGS = { h: "help", n: "dry-run" };
 const READ_ONLY_FLAGS = new Set(["check", "validate", "fences", "verify", "doctor", "help", "dry-run", "audit-tables"]);
@@ -703,6 +703,10 @@ function processFile(filePath, args) {
     if (args.fences) return runStructuralValidation(filePath, true);
     if (args.validate) return runScript("check-structure.js", "--verify", filePath) && runScript("check-fences.js", filePath);
     if (args.verify) return runScript("check-structure.js", "--verify", filePath) && runScript("check-fences.js", filePath) && checkFormatting(filePath) && checkIdempotenceReadOnly(filePath);
+    if (args["dry-run"]) {
+      if (!checkFormatting(filePath, { report: false })) console.log(`Would format: ${filePath}`);
+      return true;
+    }
     if (args.guard) {
       if (args.check) return runScript("check-structure.js", "--verify", filePath) && runScript("check-fences.js", filePath) && checkFormatting(filePath);
       // --guard + --fix: skip structural snapshot (tables unreliable), still format

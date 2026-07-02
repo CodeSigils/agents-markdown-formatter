@@ -92,6 +92,8 @@ CLI itself does not require Hermes at runtime.
 
 ## Safety policy
 
+Reference spec for users and agents: [GitHub Flavored Markdown Spec](https://github.github.com/gfm/).
+
 - `check-tables.js` enforces formatter-safe table column counts and pipe consistency, including unescaped pipes inside
   inline code spans. It is stricter than GFM body-row parsing because autonomous formatting should not guess table
   intent.
@@ -127,7 +129,7 @@ Repository-only files (`README.md`, `test/`, `package.json`, etc.) are excluded 
 
 ## Prerequisites
 
-The formatter requires Node.js >=20. For repository development:
+The formatter requires Node.js >=24. For repository development:
 
 ```bash
 npm ci

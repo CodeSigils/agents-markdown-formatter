@@ -28,7 +28,7 @@ describe('formatter CLI helper unit tests', () => {
   }
 
   it('uses a single exported minimum Node.js runtime version', () => {
-    assert.equal(NODE_RUNTIME_MIN_VERSION, 20);
+    assert.equal(NODE_RUNTIME_MIN_VERSION, 24);
   });
 
   it('parses multiple positional paths with --all', () => {
