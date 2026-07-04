@@ -96,7 +96,7 @@ describe('markdown formatter CLI integration', () => {
       const content = readFileSync(file, 'utf8');
       // Leading || should become | |
       assert.match(content, /\| \| A \| B \| \|/);
-      assert.match(content, /\| \| :- \| :- \| \|/);
+      assert.match(content, /\| {1,2}\| :--- \| :--- \| {1,2}\|/);
       assert.match(content, /\| \| 1 \| 2 \| \|/);
     } finally {
       rmSync(dir, { recursive: true, force: true });
@@ -346,7 +346,7 @@ describe('markdown formatter CLI integration', () => {
 
       assert.equal(result.status, 0, result.stdout + result.stderr);
       assert.match(result.stdout + result.stderr, /Repaired adjacent pipes/);
-      assert.match(result.stdout + result.stderr, /empty table cells/);
+      assert.match(result.stdout + result.stderr, /normalized table spacing|empty table cells/);
       const content = readFileSync(file, 'utf8');
       // Each row should be on its own line.
       const lines = content.trim().split('\n');

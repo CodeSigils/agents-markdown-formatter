@@ -397,6 +397,7 @@ function repairAdjacentPipes(content) {
  * Normalize spacing in GFM table rows. Ensures each cell has consistent
  * space-around-pipe formatting: `| cell | content |`.
  * Handles empty cells (`| |`) and delimiter cells (`| :--: | --- |`).
+ * Also normalizes delimiter dashes to exactly 3 (plus alignment markers).
  *
  * Only normalizes lines that are structurally part of pipe tables.
  * Skips fenced code blocks.
@@ -433,12 +434,15 @@ function normalizeTableSpacing(content) {
       if (cells.length <= 1) continue;
 
       // Reconstruct with consistent spacing: | cell | content |
-      const normalized = "|"
-        + cells.map((c) => {
-          if (c === "") return " ";
-          return " " + c + " ";
-        }).join("|")
-        + "|";
+      // Normalize delimiter dashes to exactly 3 (plus alignment markers)
+      const normalizedCells = cells.map((c, idx) => {
+        if (rowIndex === i + 1) {
+          return " " + c.trim().replace(/^(:?)-+(:?)$/, "$1---$2") + " ";
+        }
+        if (c === "") return " ";
+        return " " + c + " ";
+      });
+      const normalized = "|" + normalizedCells.join("|") + "|";
 
       if (normalized !== lines[rowIndex]) {
         lines[rowIndex] = normalized;
