@@ -3,8 +3,26 @@ name: CI
 on:
   push:
     branches: [main]
+    paths:
+      - 'scripts/**'
+      - 'src/**'
+      - 'test/**'
+      - 'skills/**'
+      - '.github/workflows/ci.yml'
+      - 'package.json'
+      - 'package-lock.json'
+      - '.node-version'
   pull_request:
     branches: [main]
+    paths:
+      - 'scripts/**'
+      - 'src/**'
+      - 'test/**'
+      - 'skills/**'
+      - '.github/workflows/ci.yml'
+      - 'package.json'
+      - 'package-lock.json'
+      - '.node-version'
 
 permissions:
   contents: read
@@ -20,12 +38,12 @@ jobs:
 
     steps:
     - name: Checkout code
-      uses: actions/checkout@v6
+      uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
       with:
         fetch-depth: 0
 
     - name: Setup Node.js
-      uses: actions/setup-node@v6
+      uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6
       with:
         node-version-file: .node-version
         cache: npm
@@ -51,10 +69,10 @@ jobs:
 
     steps:
     - name: Checkout code
-      uses: actions/checkout@v6
+      uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
 
     - name: Setup Node.js
-      uses: actions/setup-node@v6
+      uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6
       with:
         node-version-file: .node-version
         cache: npm
@@ -77,10 +95,10 @@ jobs:
 
     steps:
     - name: Checkout code
-      uses: actions/checkout@v6
+      uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
 
     - name: Setup Node.js
-      uses: actions/setup-node@v6
+      uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6
       with:
         node-version-file: .node-version
         cache: npm
@@ -95,27 +113,16 @@ jobs:
       run: npm run format:check
 
     - name: Fixture formatting check and idempotence
-      # Checks formatting correctness and idempotence (two-pass
-      # format produces identical output) on temp copies of clean fixtures.
-      # Structural validation is covered by the structural test matrix job.
       run: |
         trap 'rm -rf "$TMP_DIR"' EXIT
         TMP_DIR=$(mktemp -d)
         mkdir -p "$TMP_DIR/input/current" "$TMP_DIR/input/format-edge-cases"
         cp -a test/fixtures/current/. "$TMP_DIR/input/current/"
         cp -a test/fixtures/format-edge-cases/. "$TMP_DIR/input/format-edge-cases/"
-
-        # Verify formatting on copies (read-only)
         node skills/markdown-formatter/src/index.js --check --all "$TMP_DIR/input/"
-
-        # First format pass
         node skills/markdown-formatter/src/index.js --all "$TMP_DIR/input/"
         cp -a "$TMP_DIR/input" "$TMP_DIR/after-first-pass"
-
-        # Second format pass
         node skills/markdown-formatter/src/index.js --all "$TMP_DIR/input/"
-
-        # Idempotence: second pass must produce identical output
         if diff -rq "$TMP_DIR/input" "$TMP_DIR/after-first-pass"; then
           echo "Idempotence: PASS"
         else
