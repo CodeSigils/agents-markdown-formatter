@@ -8,7 +8,7 @@
 "use strict";
 
 const FORMAT_FILES = require("./format-files-list");
-const { read, extractFrontmatterVersion, extractBadgeVersion, findCliFlags, extractRuntimeNodeMinVersion } = require("./validators/common");
+const { read, extractFrontmatterVersion, extractBadgeVersion, hasDynamicBadge, findCliFlags, extractRuntimeNodeMinVersion } = require("./validators/common");
 const { validateCi } = require("./validators/ci");
 const { validateRepoShape } = require("./validators/repo-shape");
 const { validateReleaseDrift } = require("./validators/release-drift");
@@ -115,12 +115,16 @@ for (const [file, content] of [
 
 // Version badge alignment: README vs SKILL.md frontmatter
 if (readme && skillMd) {
-  const badgeVer = extractBadgeVersion(readme);
-  const frontVer = extractFrontmatterVersion(skillMd);
-  if (badgeVer && frontVer && badgeVer !== frontVer) {
-    errors.push(`README badge version "${badgeVer}" != SKILL.md frontmatter "${frontVer}"`);
-  } else if (!badgeVer && frontVer) {
-    warnings.push(`README: no version badge found (SKILL.md has "${frontVer}")`);
+  if (hasDynamicBadge(readme)) {
+    // Dynamic GitHub Release badge — always current, skip comparison
+  } else {
+    const badgeVer = extractBadgeVersion(readme);
+    const frontVer = extractFrontmatterVersion(skillMd);
+    if (badgeVer && frontVer && badgeVer !== frontVer) {
+      errors.push(`README badge version "${badgeVer}" != SKILL.md frontmatter "${frontVer}"`);
+    } else if (!badgeVer && frontVer) {
+      warnings.push(`README: no version badge found (SKILL.md has "${frontVer}")`);
+    }
   }
 }
 

@@ -1,6 +1,6 @@
 # Agents Markdown Formatter
 
-[![v1.2.0](https://img.shields.io/badge/version-1.2.0-blue.svg)](skills/markdown-formatter/SKILL.md)
+[![GitHub Release](https://img.shields.io/github/v/release/CodeSigils/agents-markdown-formatter?display_name=tag&sort=semver)](https://github.com/CodeSigils/agents-markdown-formatter/releases/latest)
 [![CI](https://github.com/CodeSigils/agents-markdown-formatter/actions/workflows/ci.yml/badge.svg)](https://github.com/CodeSigils/agents-markdown-formatter/actions/workflows/ci.yml)
 
 Zero-dependency GFM and MDX formatting for AI-agent-authored Markdown, with table, pipe, and fence guards.

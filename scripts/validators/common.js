@@ -45,6 +45,13 @@ function extractBadgeVersion(content) {
   return m ? m[1] : null;
 }
 
+function hasDynamicBadge(content) {
+  // GitHub Release badge auto-fetches the latest version from the API.
+  // When present, the README badge is always current and version comparison
+  // with SKILL.md frontmatter should be skipped.
+  return /img\.shields\.io\/github\/v\/release\//.test(content);
+}
+
 function findCliFlags(content) {
   const setMatch = content.match(/LONG_FLAGS\s*=\s*new\s+Set\(\s*\[([^\]]+)\]/s);
   if (!setMatch) return [];
@@ -66,6 +73,6 @@ function extractNodeVersionFile(content) {
 
 module.exports = {
   ROOT, read, findAllFiles,
-  extractFrontmatterVersion, extractBadgeVersion, findCliFlags,
+  extractFrontmatterVersion, extractBadgeVersion, hasDynamicBadge, findCliFlags,
   extractRuntimeNodeMinVersion, extractNodeVersionFile,
 };
