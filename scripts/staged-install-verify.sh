@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 # staged-install-verify.sh - Verify staged runtime allowlist for markdown-formatter skill
 

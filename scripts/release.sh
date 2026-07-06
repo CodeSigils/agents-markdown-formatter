@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 #
 # release.sh — Tag and create a GitHub Release from git history.
 #
@@ -29,13 +29,9 @@ set -euo pipefail
 
 cd "$(git rev-parse --show-toplevel)"
 
-COLOR_RED='\033[0;31m'
-COLOR_YELLOW='\033[1;33m'
-COLOR_RESET='\033[0m'
-
-die()   { echo -e "${COLOR_RED}ERROR:${COLOR_RESET} $*" >&2; exit 1; }
-warn()  { echo -e "${COLOR_YELLOW}WARNING:${COLOR_RESET} $*" >&2; }
-info()  { echo "  $*"; }
+die()   { printf '\033[0;31mERROR:\033[0m %s\n' "$*" >&2; exit 1; }
+warn()  { printf '\033[1;33mWARNING:\033[0m %s\n' "$*" >&2; }
+info()  { printf '  %s\n' "$*"; }
 
 # ---------------------------------------------------------------------------
 # Read version

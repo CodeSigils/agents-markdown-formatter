@@ -35,6 +35,23 @@ Check installed runtime readiness:
 node ~/.hermes/skills/markdown-formatter/src/index.js --doctor
 ```
 
+### Hermes auto-wiring (post-write hook)
+
+To catch table formatting issues (like `||` double pipes) automatically after
+every `write_file` or `patch` call, add this to your Hermes `config.yaml`:
+
+```yaml
+hooks:
+  post_tool_call:
+    - command: node ~/.hermes/skills/markdown-formatter/src/index.js --check
+      matcher: write_file
+```
+
+This runs `--check` (read-only) on every written file. It blocks pipe hazards,
+fence errors, and formatting drift before they reach git. For auto-repair
+instead of blocking, use `--fix` instead of `--check` (but `--fix` modifies
+files during write — use with care).
+
 ## Why this exists
 
 AI agents write a lot of Markdown: READMEs, plans, runbooks, notes, review comments, and MDX documentation. That output
