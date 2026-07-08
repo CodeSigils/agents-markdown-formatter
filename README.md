@@ -3,7 +3,7 @@
 [![GitHub Release](https://img.shields.io/github/v/release/CodeSigils/zero-md-formatter?display_name=tag&sort=semver)](https://github.com/CodeSigils/zero-md-formatter/releases/latest)
 [![CI](https://github.com/CodeSigils/zero-md-formatter/actions/workflows/ci.yml/badge.svg)](https://github.com/CodeSigils/zero-md-formatter/actions/workflows/ci.yml)
 
-Zero-dependency GFM and MDX formatter with structural guardrails — trailing
+Zero-dependency [GFM] and MDX formatter with structural guardrails — trailing
 whitespace removal, table alignment, fence normalization, pipe-safety checks,
 column-count enforcement, and drift detection.
 
@@ -60,7 +60,7 @@ node src/index.js --fix --guard README.md
 - Remove trailing whitespace
 - Ensure a final newline
 - Normalize leading-tab indentation outside fenced code blocks
-- Align GFM table columns when the table has no empty-cell ambiguity
+- Align [GFM] table columns when the table has no empty-cell ambiguity
 - Normalize tilde fences to backtick fences, escalating the backtick count when
   nested content requires it
 
@@ -115,11 +115,11 @@ mdfmt --doctor
 
 ## Table and pipe safety
 
-GFM tables are notoriously fragile in agent-generated Markdown. This formatter
+[GFM] tables are notoriously fragile in agent-generated Markdown. This formatter
 includes guard scripts that catch the most common failure modes before
 formatting:
 
-- **Adjacent pipes** (`||`) create empty cells per GFM. Write modes
+- **Adjacent pipes** (`||`) create empty cells per [GFM]. Write modes
   automatically insert a space (`| |`), preserving empty-cell semantics.
   Read-only modes block with a clear error.
 - **Inline-code pipes** (`| `cmd \| opt` | title |`) look like extra columns to
@@ -129,7 +129,7 @@ formatting:
   write mode, repaired by padding short rows or rolling back on structural
   drift.
 - **Empty-cell tables** that remain ambiguous are preserved by skipping the
-  full formatter pass. The delimiter row is still normalized to GFM-canonical
+  full formatter pass. The delimiter row is still normalized to [GFM]-canonical
   width.
 - **Unclosed-fence preflight** — all modes detect unclosed fences before
   running table/pipe checks, skipping unreliable validation when fences are
@@ -199,10 +199,10 @@ Reference spec: [GitHub Flavored Markdown Spec](https://github.github.com/gfm/).
 
 - `check-tables.js` enforces formatter-safe table column counts and pipe
   consistency, including unescaped pipes inside inline code spans. Stricter
-  than GFM body-row parsing because autonomous formatting should not guess
+  than [GFM] body-row parsing because autonomous formatting should not guess
   table intent.
 - `check-pipes.js` detects adjacent pipes in table rows, which create valid
-  empty cells per GFM. Write modes repair them by inserting a space between
+  empty cells per [GFM]. Write modes repair them by inserting a space between
   the pipes. Read-only modes block with a clear error.
 - All CLI modes run pipe-safety preflight checks before table operations. When
   unclosed fences are detected, the CLI warns that table and pipe checks are
@@ -263,3 +263,5 @@ tarball via the `files` field in package.json.
 ## License
 
 MIT
+
+[GFM]: https://github.github.com/gfm/
