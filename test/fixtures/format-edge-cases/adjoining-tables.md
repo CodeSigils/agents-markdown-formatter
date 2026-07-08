@@ -6,10 +6,10 @@ This fixture tests how the guard scripts handle the adjoining case.
 
 ## Adjoining tables (no blank line between)
 
-| A | B |
-|---|---|
-| 1 | 2 |
-| C | D |
+| A   | B   |
+| --- | --- |
+| 1   | 2   |
+| C   | D   |
 |---|---|
 | 3 | 4 |
 
@@ -19,10 +19,10 @@ treat this as one table with 2 data rows, not two tables.
 
 ## Same tables, separated by blank line (valid reference)
 
-| A | B |
-|---|---|
-| 1 | 2 |
+| A   | B   |
+| --- | --- |
+| 1   | 2   |
 
-| C | D |
-|---|---|
-| 3 | 4 |
+| C   | D   |
+| --- | --- |
+| 3   | 4   |
