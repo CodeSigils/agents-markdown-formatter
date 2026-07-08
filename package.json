@@ -19,15 +19,19 @@
     "agent-tools",
     "hermes-skill"
   ],
-  "homepage": "https://github.com/CodeSigils/agents-markdown-formatter#readme",
+  "homepage": "https://github.com/CodeSigils/zero-md-formatter#readme",
   "bugs": {
-    "url": "https://github.com/CodeSigils/agents-markdown-formatter/issues"
+    "url": "https://github.com/CodeSigils/zero-md-formatter/issues"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/CodeSigils/agents-markdown-formatter.git"
+    "url": "git+https://github.com/CodeSigils/zero-md-formatter.git"
   },
   "license": "MIT",
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  },
   "files": [
     "src/",
     "guard/",

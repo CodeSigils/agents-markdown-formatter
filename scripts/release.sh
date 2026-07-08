@@ -274,6 +274,6 @@ gh release create "${TAG}" \
 
 echo ""
 echo "Release ${TAG} created and published."
-echo "  https://github.com/CodeSigils/agents-markdown-formatter/releases/tag/${TAG}"
+echo "  https://github.com/CodeSigils/zero-md-formatter/releases/tag/${TAG}"
 echo ""
 echo "Verify CI is green before announcing."

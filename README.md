@@ -1,7 +1,7 @@
 # zero-md-formatter
 
-[![GitHub Release](https://img.shields.io/github/v/release/CodeSigils/agents-markdown-formatter?display_name=tag&sort=semver)](https://github.com/CodeSigils/agents-markdown-formatter/releases/latest)
-[![CI](https://github.com/CodeSigils/agents-markdown-formatter/actions/workflows/ci.yml/badge.svg)](https://github.com/CodeSigils/agents-markdown-formatter/actions/workflows/ci.yml)
+[![GitHub Release](https://img.shields.io/github/v/release/CodeSigils/zero-md-formatter?display_name=tag&sort=semver)](https://github.com/CodeSigils/zero-md-formatter/releases/latest)
+[![CI](https://github.com/CodeSigils/zero-md-formatter/actions/workflows/ci.yml/badge.svg)](https://github.com/CodeSigils/zero-md-formatter/actions/workflows/ci.yml)
 
 Zero-dependency GFM and MDX formatter with structural guardrails — trailing
 whitespace removal, table alignment, fence normalization, pipe-safety checks,
@@ -46,8 +46,8 @@ console.log(result);
 ### Run from source
 
 ```bash
-git clone https://github.com/CodeSigils/agents-markdown-formatter.git
-cd agents-markdown-formatter
+git clone https://github.com/CodeSigils/zero-md-formatter.git
+cd zero-md-formatter
 node src/index.js --fix --guard README.md
 ```
 
@@ -151,7 +151,7 @@ agentskills.io-formatted skills.
 <summary><b>Hermes Agent</b></summary>
 
 ```bash
-hermes skills install CodeSigils/agents-markdown-formatter/markdown-formatter --yes
+hermes skills install CodeSigils/zero-md-formatter/markdown-formatter --yes
 mdfmt --fix --guard README.md
 ```
 
@@ -174,9 +174,9 @@ of `--check` for auto-repair.
 
 ```bash
 # Clone the repo or copy the skill directory
-git clone https://github.com/CodeSigils/agents-markdown-formatter.git
+git clone https://github.com/CodeSigils/zero-md-formatter.git
 # Point at the source directory
-node agents-markdown-formatter/src/index.js --fix --guard README.md
+node zero-md-formatter/src/index.js --fix --guard README.md
 ```
 
 Or install via npm globally and use the `mdfmt` binary directly.
