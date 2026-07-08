@@ -2,22 +2,31 @@
 
 ## Supported Versions
 
-This project is a single Node.js formatter skill with zero runtime
-dependencies. The latest tagged GitHub Release is the supported version.
-Older releases are not backported — upgrade to the latest tag to receive
-fixes.
+| Version | Supported          |
+| ------- | ------------------ |
+| 1.4.x   | :white_check_mark: |
+| < 1.4   | :x:                |
 
 ## Reporting a Vulnerability
 
-This project contains no secrets and no network-facing service. It ships
-a Node.js formatter with supporting CI tooling. If you find an issue with
-the content or CI configuration, please open a public issue on GitHub.
+Please report security vulnerabilities privately via:
 
-Do **not** open a public issue if the vulnerability involves the GitHub
-Actions workflow (e.g., leaked secrets in CI logs). Report privately to the
-repository owner via GitHub's security advisory tool.
+- **Email**: toolsoftrade.web@gmail.com (GPG key available on GitHub profile)
+- **GitHub Security Advisory**: Use the "Report a vulnerability" tab on this repository
 
-## Commit Signing
+Do not file public issues for security vulnerabilities.
 
-Maintainer commits from 2026-07-05 onward are SSH-signed. Earlier commits may
-be unsigned and are retained to avoid rewriting public history.
+## Response Timeline
+
+- **Acknowledgment**: Within 48 hours
+- **Initial assessment**: Within 7 days
+- **Fix timeline**: Depends on severity; critical issues targeted within 30 days
+
+## Security Practices
+
+- **Zero dependencies** — eliminates supply-chain attack surface
+- **Signed commits** — all commits GPG-signed; branch protection enforces this
+- **2FA on npm** — publishing requires OTP or granular token
+- **Provenance** — `publishConfig.provenance: true` for CI publishes (GitHub OIDC)
+- **Minimal runtime** — pure Node.js >=24, no native bindings
+- **No postinstall scripts** — `prepare` only sets git hooks locally
