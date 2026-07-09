@@ -48,6 +48,13 @@ describe('formatter CLI helper unit tests', () => {
     assert.deepStrictEqual(args._, []);
   });
 
+  it('parses --version as a read-only flag', () => {
+    const args = parseArgs(['node', 'index.js', '--version']);
+
+    assert.equal(args.version, true);
+    assert.deepStrictEqual(args._, []);
+  });
+
   it('reports runtime readiness from --doctor checks', () => {
     const { result, output } = collectDoctor();
 

@@ -1,9 +1,10 @@
-# .mdfmtignore — files and directories to skip with --all
+# .mdfmtignore — files and directories to skip when using --all
 # One pattern per line. Lines starting with # are comments.
 # Patterns ending with / match directory prefixes.
 # Patterns containing * are treated as simple globs where *
 # matches any characters except a path separator (/).
-# Examples:
-#   vendor/        skip the vendor/ directory entirely
-#   *.generated.md skip any file matching this pattern
-#   tmp/           skip the tmp/ directory
+
+node_modules/
+pack/
+*.structure.json
+*.snap

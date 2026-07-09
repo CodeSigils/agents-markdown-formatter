@@ -414,6 +414,14 @@ describe('markdown formatter CLI integration', () => {
     assert.match(result.stdout, /--doctor/);
   });
 
+  it('--version prints package version and exits 0', () => {
+    const pkg = JSON.parse(require('fs').readFileSync(join(ROOT, 'package.json'), 'utf8'));
+    const result = runCli(['--version']);
+
+    assert.equal(result.status, 0, result.stdout + result.stderr);
+    assert.equal(result.stdout.trim(), pkg.version);
+  });
+
   it('--validate blocks on adjacent pipes', () => {
     const file = 'test/fixtures/violations/table-adjacent-pipes.md';
 

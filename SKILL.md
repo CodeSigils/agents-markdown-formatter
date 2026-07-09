@@ -83,6 +83,7 @@ binary. See the README for details on per-platform auto-wiring.
 - `--dry-run`, `-n`: Run pipe-safety preflight, then show what would be changed without writing files
 - `--audit-tables`: Print table row cell counts and pipe hazards without writing; use before/after agent table edits
 - `--no-repair`: In write modes, report repairable table issues instead of modifying them
+- `--version`: Print version number and exit
 - `--help`, `-h`: Display help message
 
 ### File exclusion

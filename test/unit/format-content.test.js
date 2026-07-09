@@ -158,4 +158,15 @@ describe('format-content micro-formatter', () => {
     assert.doesNotMatch(result, /\r\n/, 'CRLF should be converted to LF');
     assert.match(result, /\n$/, 'should end with LF newline');
   });
+
+  it('handles empty string and whitespace-only input', () => {
+    // Empty string becomes final newline only
+    assert.equal(formatContent(''), '\n');
+    // 2+ trailing spaces preserved as hard line breaks
+    assert.equal(formatContent('   \n  \n'), '   \n  \n');
+    // Multiple blank lines preserved (no trailing whitespace to strip)
+    assert.equal(formatContent('\n\n\n'), '\n\n\n');
+    // Single line with only spaces: trailing spaces preserved, final newline added
+    assert.equal(formatContent('     '), '     \n');
+  });
 });

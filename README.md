@@ -102,6 +102,7 @@ mdfmt [options] <path...>
 | `--dry-run`, `-n` | Run pipe-safety preflight, preview changes without writing         |
 | `--audit-tables`  | Print table row cell counts and pipe hazards without writing       |
 | `--no-repair`     | Report repairable table issues instead of modifying them           |
+| `--version`       | Print version number and exit                                      |
 | `--help`, `-h`    | Display help message                                               |
 
 ### File exclusion

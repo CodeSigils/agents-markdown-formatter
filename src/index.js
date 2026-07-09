@@ -36,9 +36,9 @@ const { buildSnapshot, validateStructure, loadSnapshot, saveSnapshot, compareSna
 const SKILL_DIR = resolve(__dirname, "..");
 const FORMATTER_MODULE = join(SKILL_DIR, "src", "format-content.mjs");
 const NODE_RUNTIME_MIN_VERSION = 24;
-const LONG_FLAGS = new Set(["check", "fix", "all", "guard", "verify", "fences", "validate", "doctor", "dry-run", "audit-tables", "no-repair", "help"]);
+const LONG_FLAGS = new Set(["check", "fix", "all", "guard", "verify", "fences", "validate", "doctor", "dry-run", "audit-tables", "no-repair", "help", "version"]);
 const SHORT_FLAGS = { h: "help", n: "dry-run" };
-const READ_ONLY_FLAGS = new Set(["check", "validate", "fences", "verify", "doctor", "help", "dry-run", "audit-tables"]);
+const READ_ONLY_FLAGS = new Set(["check", "validate", "fences", "verify", "doctor", "help", "dry-run", "audit-tables", "version"]);
 const MARKDOWN_EXTENSIONS = new Set([".md", ".markdown", ".mdx"]);
 
 /**
@@ -48,10 +48,10 @@ const MARKDOWN_EXTENSIONS = new Set([".md", ".markdown", ".mdx"]);
  * Throws on unknown flags. The -- separator stops flag parsing.
  *
  * @param {string[]} argv - Process argv array (e.g. process.argv).
- * @returns {{ _: string[], check: boolean, fix: boolean, all: boolean, guard: boolean, verify: boolean, fences: boolean, validate: boolean, doctor: boolean, 'dry-run': boolean, 'audit-tables': boolean, 'no-repair': boolean, help: boolean }}
+ * @returns {{ _: string[], check: boolean, fix: boolean, all: boolean, guard: boolean, verify: boolean, fences: boolean, validate: boolean, doctor: boolean, 'dry-run': boolean, 'audit-tables': boolean, 'no-repair': boolean, help: boolean, version: boolean }}
  */
 function parseArgs(argv) {
-  const args = { _: [], check: false, fix: false, all: false, guard: false, verify: false, fences: false, validate: false, doctor: false, "dry-run": false, "audit-tables": false, "no-repair": false, help: false };
+  const args = { _: [], check: false, fix: false, all: false, guard: false, verify: false, fences: false, validate: false, doctor: false, "dry-run": false, "audit-tables": false, "no-repair": false, help: false, version: false };
 
   for (let i = 2; i < argv.length; i++) {
     const arg = argv[i];
@@ -95,6 +95,7 @@ Options:
   --dry-run, -n     Run pipe-safety preflight, then preview changes
   --audit-tables    Print table row cell counts and pipe hazards without writing
   --no-repair       In write modes, report repairable table issues instead of modifying them
+  --version         Print version number and exit
   --help, -h        Show this help
 
 File exclusion:
@@ -1016,6 +1017,11 @@ function processFile(filePath, args) {
  */
 function main(argv = process.argv) {
   const args = parseArgs(argv);
+  if (args.version) {
+    const pkg = JSON.parse(readFileSync(join(SKILL_DIR, "package.json"), "utf8"));
+    console.log(pkg.version);
+    return 0;
+  }
   if (args.doctor) return runDoctor() ? 0 : 1;
   if (args.help || (args._.length === 0 && !args.all)) {
     printHelp();
