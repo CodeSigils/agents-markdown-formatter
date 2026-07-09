@@ -91,27 +91,67 @@ function splitTableCellsForStyle(line, hasOuterPipes = true) {
   return cells;
 }
 
+/**
+ * Split a GFM table row into cells, assuming leading/trailing outer pipes.
+ *
+ * Convenience wrapper around splitTableCellsForStyle with hasOuterPipes=true.
+ *
+ * @param {string} line - A table row line.
+ * @returns {string[]} Cell content strings.
+ */
 function splitTableCells(line) {
   return splitTableCellsForStyle(line, true);
 }
 
+/**
+ * Quick check if a line could be a GFM table row.
+ *
+ * A line is a potential table row if it has more than one cell after splitting
+ * (implying at least one pipe separator) or if it starts and ends with | and
+ * has at least 2 pipes.
+ *
+ * @param {string} line - A line of markdown content.
+ * @returns {boolean} True if the line resembles a table row.
+ */
 function isPotentialTableRow(line) {
   const trimmed = line.trim();
   const pipeCount = (trimmed.match(/\|/g) || []).length;
   return splitTableCells(line).length > 1 || (trimmed.startsWith("|") && trimmed.endsWith("|") && pipeCount >= 2);
 }
 
+/**
+ * Check if a line starts a Markdown block boundary (heading, list, blockquote).
+ *
+ * Lines matching these patterns are treated as non-table boundaries even if
+ * they contain pipes, preventing table absorption across block boundaries.
+ *
+ * @param {string} line - A line of markdown content.
+ * @returns {boolean} True if the line is a markdown block boundary.
+ */
 function isMarkdownBlockBoundary(line) {
   const trimmed = line.trimStart();
   return /^(#{1,6}\s|[-+*]\s+|\d+[.)]\s+|>\s?)/.test(trimmed);
 }
 
+/**
+ * Check if a line is a GFM table body row (not a delimiter, not a boundary).
+ *
+ * @param {string} line - A line of markdown content.
+ * @returns {boolean} True if the line is a table data row.
+ */
 function isTableBodyRow(line) {
   if (!isPotentialTableRow(line) || isDelimiterLine(line)) return false;
   if (line.trimStart().startsWith("|")) return true;
   return !isMarkdownBlockBoundary(line);
 }
 
+/**
+ * Check if a line is a table body row, with configurable outer-pipe style.
+ *
+ * @param {string} line - A line of markdown content.
+ * @param {boolean} [hasOuterPipes=true] - Whether the table uses leading/trailing |.
+ * @returns {boolean} True if the line is a table data row for this table style.
+ */
 function isTableBodyRowForStyle(line, hasOuterPipes = true) {
   if (isDelimiterLine(line)) return false;
   const potential = hasOuterPipes
@@ -185,6 +225,16 @@ function tableRowHasInlineCodePipe(line) {
   return false;
 }
 
+/**
+ * Check if a line is a GFM table delimiter row.
+ *
+ * A delimiter row consists of pipe-separated cells containing only dashes
+ * (with optional leading/trailing colons for alignment). Empty edge cells
+ * from ||-prefixed tables are filtered out before checking.
+ *
+ * @param {string} line - A line of markdown content.
+ * @returns {boolean} True if the line is a table delimiter row.
+ */
 function isDelimiterLine(line) {
   const cells = splitTableCells(line);
   if (cells.length === 0) return false;
@@ -197,6 +247,22 @@ function isDelimiterLine(line) {
   return nonEmptyCells.every((cell) => /^:?-{1,}:?$/.test(cell.trim()));
 }
 
+/**
+ * Fence state machine transition for the shared getFenceBoundary tracker.
+ *
+ * When called with no current fence (null), attempts to match an opener.
+ * When called with a current fence, attempts to match a closer.
+ *
+ * Return values:
+ * - null: no fence boundary detected (line is not a fence when outside,
+ *   or line is not a closer when inside)
+ * - {style, length}: entered a new fence (opener found)
+ * - false: exited the current fence (closer found)
+ *
+ * @param {string} line - A line of markdown content.
+ * @param {object|null} currentFence - Current fence state ({style, length}) or null.
+ * @returns {object|null|false} New fence state, null for no match, or false if closed.
+ */
 function getFenceBoundary(line, currentFence = null) {
   if (!currentFence) {
     const opener = line.match(/^( {0,3})(`{3,}|~{3,})([^\n]*)$/);
@@ -290,11 +356,25 @@ function validateTables(content) {
   return errors;
 }
 
+/**
+ * Validate tables in a file by path.
+ *
+ * @param {string} filePath - Path to a markdown file.
+ * @returns {string[]} Error messages from validateTables.
+ */
 function validateFile(filePath) {
   const content = fs.readFileSync(filePath, "utf8");
   return validateTables(content);
 }
 
+/**
+ * CLI entry point. Processes file paths from argv and exits with
+ * code 0 if all files are valid, 1 if any violations found or files
+ * cannot be read.
+ *
+ * @param {string[]} [argv=process.argv.slice(2)] - CLI arguments (file paths).
+ * @returns {void} Sets process.exitCode.
+ */
 function main(argv = process.argv.slice(2)) {
   if (argv.length === 0) {
     console.error("Usage: node check-tables.js <filePath...>");

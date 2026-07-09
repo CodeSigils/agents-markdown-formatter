@@ -41,6 +41,15 @@ const SHORT_FLAGS = { h: "help", n: "dry-run" };
 const READ_ONLY_FLAGS = new Set(["check", "validate", "fences", "verify", "doctor", "help", "dry-run", "audit-tables"]);
 const MARKDOWN_EXTENSIONS = new Set([".md", ".markdown", ".mdx"]);
 
+/**
+ * Parse CLI arguments into a structured options object.
+ *
+ * Recognizes --long-flag, -n (short), and positional paths.
+ * Throws on unknown flags. The -- separator stops flag parsing.
+ *
+ * @param {string[]} argv - Process argv array (e.g. process.argv).
+ * @returns {{ _: string[], check: boolean, fix: boolean, all: boolean, guard: boolean, verify: boolean, fences: boolean, validate: boolean, doctor: boolean, 'dry-run': boolean, 'audit-tables': boolean, 'no-repair': boolean, help: boolean }}
+ */
 function parseArgs(argv) {
   const args = { _: [], check: false, fix: false, all: false, guard: false, verify: false, fences: false, validate: false, doctor: false, "dry-run": false, "audit-tables": false, "no-repair": false, help: false };
 
@@ -63,6 +72,11 @@ function parseArgs(argv) {
   return args;
 }
 
+/**
+ * Print help text to stdout.
+ *
+ * @returns {void}
+ */
 function printHelp() {
   console.log(`
 Markdown Formatter CLI
@@ -90,11 +104,27 @@ File exclusion:
 `);
 }
 
+/**
+ * Check if a Node.js version string meets the minimum requirement.
+ *
+ * @param {string} version - Node.js version string (e.g. "v24.0.0").
+ * @returns {boolean} True if version >= NODE_RUNTIME_MIN_VERSION.
+ */
 function isSupportedNodeVersion(version) {
   const major = Number(String(version).replace(/^v/, "").split(".")[0]);
   return Number.isInteger(major) && major >= NODE_RUNTIME_MIN_VERSION;
 }
 
+/**
+ * Check runtime prerequisites without modifying files.
+ *
+ * Verifies Node.js version, formatter module readiness, and presence
+ * of all required payload files. Accepts injectable dependencies
+ * for testing (log, exists, nodeVersion, checkFormatter).
+ *
+ * @param {{log?: function, exists?: function, nodeVersion?: string, checkFormatter?: function}} [options={}] - Injectable dependencies.
+ * @returns {boolean} True if all prerequisites are met.
+ */
 function runDoctor(options = {}) {
   const log = options.log || ((line) => console.log(line));
   const exists = options.exists || existsSync;
@@ -142,6 +172,17 @@ function runDoctor(options = {}) {
   return ok;
 }
 
+/**
+ * Run a guard script by name against one or more file paths.
+ *
+ * Dispatches to validateFences, validateTables, validatePipes, or
+ * check-structure depending on the script name. Returns true if the
+ * script passes for all files.
+ *
+ * @param {string} script - Guard script name (e.g. "check-fences.js").
+ * @param {...string} scriptArgs - File paths to check.
+ * @returns {boolean} True if all files pass.
+ */
 function runScript(script, ...scriptArgs) {
   if (!scriptArgs.length) {
     console.error(`Usage: ${script} <args...>`);
@@ -235,6 +276,12 @@ function runScript(script, ...scriptArgs) {
   return false;
 }
 
+/**
+ * Check if a file path has a supported markdown extension.
+ *
+ * @param {string} filePath - Absolute or relative path.
+ * @returns {boolean} True if extension is .md, .markdown, or .mdx.
+ */
 function isMarkdownFile(filePath) {
   return MARKDOWN_EXTENSIONS.has(extname(filePath));
 }
@@ -509,6 +556,13 @@ function normalizeTableSpacing(content) {
   return modified ? lines.join("\n") : content;
 }
 
+/**
+ * Check if a specific table (by start index) has any empty cells.
+ *
+ * @param {string[]} lines - Content split by newline.
+ * @param {number} startIndex - Line index where the table starts.
+ * @returns {boolean} True if any row in the table has an empty cell.
+ */
 function tableHasEmptyCells(lines, startIndex) {
   const header = lines[startIndex];
   const delimiter = lines[startIndex + 1];
@@ -555,6 +609,17 @@ function hasTableWithEmptyCells(content) {
   return false;
 }
 
+/**
+ * Audit table structure in content and produce a human-readable report.
+ *
+ * Scans for GFM tables, reporting each table's location, cell counts
+ * per row, and structural hazards (adjacent pipes, inline-code pipes,
+ * column drift, empty cells).
+ *
+ * @param {string} content - Markdown file text.
+ * @param {string} [label="<input>"] - Label for the report (typically file path).
+ * @returns {string} Human-readable audit report.
+ */
 function auditTables(content, label = "<input>") {
   const lines = content.split("\n");
   const output = [`Table audit: ${label}`];
@@ -608,6 +673,17 @@ function isWriteMode(args) {
   return true; // no read-only flag → write mode (default)
 }
 
+/**
+ * Recursively find markdown files in a directory, filtering by ignore patterns.
+ *
+ * Skips node_modules, .git, and dot-directories by default. Applies
+ * .mdfmtignore patterns on top.
+ *
+ * @param {string} dir - Directory to search.
+ * @param {string[]} [ignorePatterns=[]] - Patterns from .mdfmtignore.
+ * @param {string|null} [cwd=null] - Base directory for relative path matching.
+ * @returns {string[]} Sorted unique file paths.
+ */
 function findMarkdownFiles(dir, ignorePatterns = [], cwd = null) {
   const base = cwd || dir;
   const files = [];
@@ -630,6 +706,18 @@ function findMarkdownFiles(dir, ignorePatterns = [], cwd = null) {
   return files;
 }
 
+/**
+ * Resolve input paths to an absolute list of markdown files.
+ *
+ * Accepts file paths and directory paths. Directories require
+ * --all (recursive flag). Applies .mdfmtignore filtering. Throws
+ * on non-existent paths or missing --all for directories.
+ *
+ * @param {string[]} inputs - CLI positional arguments (paths).
+ * @param {boolean} recursive - Whether to recurse into directories (--all).
+ * @param {string[]} [ignorePatterns=[]] - Patterns from .mdfmtignore.
+ * @returns {string[]} Sorted unique absolute file paths.
+ */
 function resolveInputFiles(inputs, recursive, ignorePatterns = []) {
   const files = [];
   for (const input of inputs.length > 0 ? inputs : ["."]) {
@@ -649,10 +737,26 @@ function resolveInputFiles(inputs, recursive, ignorePatterns = []) {
   return [...new Set(files)].sort();
 }
 
+/**
+ * Format markdown content using the core formatter module with default options.
+ *
+ * @param {string} content - Raw markdown text.
+ * @returns {string} Formatted markdown text.
+ */
 function formatFileContent(content) {
   return formatContent(content, { indentWidth: 2 });
 }
 
+/**
+ * Check formatting of a file (read-only).
+ *
+ * Reads the file, formats it in memory, and compares against the
+ * original. Reports issues to stderr. Does not modify the file.
+ *
+ * @param {string} filePath - Path to a markdown file.
+ * @param {{report?: boolean}} [options={}] - Options. Set report=false to suppress stderr output.
+ * @returns {boolean} True if already formatted correctly.
+ */
 function checkFormatting(filePath, options = {}) {
   const content = readFileSync(filePath, "utf8");
   const formatted = formatFileContent(content);
@@ -661,6 +765,12 @@ function checkFormatting(filePath, options = {}) {
   return false;
 }
 
+/**
+ * Format a file in-place. Writes changes to disk if needed.
+ *
+ * @param {string} filePath - Path to a markdown file.
+ * @returns {boolean} True on success (always returns true after writing).
+ */
 function writeFormatting(filePath) {
   const content = readFileSync(filePath, "utf8");
   const formatted = formatFileContent(content);
@@ -668,6 +778,13 @@ function writeFormatting(filePath) {
   return true;
 }
 
+/**
+ * Check that formatting is idempotent (formatting twice produces the same
+ * result). Works on a temp copy without modifying the original file.
+ *
+ * @param {string} filePath - Path to the original file.
+ * @returns {boolean} True if formatting is idempotent.
+ */
 function checkIdempotenceReadOnly(filePath) {
   const dir = mkdtempSync(join(tmpdir(), "markdown-formatter-"));
   const copy = join(dir, basename(filePath));
@@ -687,6 +804,17 @@ function checkIdempotenceReadOnly(filePath) {
   }
 }
 
+/**
+ * Run all structural guard validations on a file.
+ *
+ * When includeFencesOnly is true, only runs fence validation (for
+ * --fences mode). Otherwise runs structure, fences, tables, and
+ * pipes checks sequentially.
+ *
+ * @param {string} filePath - Path to a markdown file.
+ * @param {boolean} [includeFencesOnly=false] - If true, skip table/pipe checks.
+ * @returns {boolean} True if all validations pass.
+ */
 function runStructuralValidation(filePath, includeFencesOnly = false) {
   if (includeFencesOnly) return runScript("check-fences.js", filePath);
   return (
@@ -697,6 +825,24 @@ function runStructuralValidation(filePath, includeFencesOnly = false) {
   );
 }
 
+/**
+ * Process a single file through the full format/guard pipeline.
+ *
+ * The pipeline order is:
+ * 1. Preflight: detect unclosed fences (blocks table/pipe reliability)
+ * 2. Guard pipe safety (--audit-tables, inline-code pipe check)
+ * 3. Adjacent pipe repair (write modes) or block (read-only modes)
+ * 4. Table column repair (write modes)
+ * 5. Guard validation (--verify, --validate, --fences, --guard, --check modes)
+ * 6. Formatting (write-modes and --guard)
+ * 7. Idempotence check
+ *
+ * Returns true if the file was processed successfully, false on error.
+ *
+ * @param {string} filePath - Path to a markdown file.
+ * @param {{ check: boolean, fix: boolean, all: boolean, guard: boolean, verify: boolean, fences: boolean, validate: boolean, doctor: boolean, 'dry-run': boolean, 'audit-tables': boolean, 'no-repair': boolean, help: boolean, _: string[] }} args - Parsed CLI arguments.
+ * @returns {boolean} True if processing succeeded.
+ */
 function processFile(filePath, args) {
   const writeMode = isWriteMode(args);
 
@@ -861,6 +1007,13 @@ function processFile(filePath, args) {
   return writeFormatting(filePath) && checkIdempotenceReadOnly(filePath);
 }
 
+/**
+ * CLI entry point. Parses argv, resolves input files (with .mdfmtignore
+ * filtering), processes each file, and returns an exit code.
+ *
+ * @param {string[]} [argv=process.argv] - Process argv array.
+ * @returns {number} Exit code (0 = success, 1 = failure).
+ */
 function main(argv = process.argv) {
   const args = parseArgs(argv);
   if (args.doctor) return runDoctor() ? 0 : 1;

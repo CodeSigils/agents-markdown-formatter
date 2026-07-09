@@ -23,6 +23,15 @@
 const fs = require("fs");
 const process = require("process");
 
+/**
+ * Validate fenced code block structure in markdown content per GFM §4.7.
+ *
+ * Checks for unclosed fences, empty language tags, leading whitespace in
+ * language tags, and backticks in backtick fence info strings.
+ *
+ * @param {string} content - Markdown file text.
+ * @returns {string[]} Error messages, one per violation. Empty array if valid.
+ */
 function validateFences(content) {
   const errors = [];
   const lines = content.split("\n");
@@ -76,11 +85,24 @@ function validateFences(content) {
   return errors;
 }
 
+/**
+ * Validate fenced code blocks in a file by path.
+ *
+ * @param {string} filePath - Path to a markdown file.
+ * @returns {string[]} Error messages from validateFences.
+ */
 function validateFile(filePath) {
   const content = fs.readFileSync(filePath, "utf8");
   return validateFences(content);
 }
 
+/**
+ * CLI entry point. Processes file paths from argv and exits with
+ * code 0 if all files are valid, 1 if any violations found.
+ *
+ * @param {string[]} [argv=process.argv.slice(2)] - CLI arguments (file paths).
+ * @returns {void} Sets process.exitCode.
+ */
 function main(argv = process.argv.slice(2)) {
   if (argv.length === 0) {
     console.error("Error: No file path provided");

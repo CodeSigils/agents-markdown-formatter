@@ -21,6 +21,14 @@ const fs = require("fs");
 const process = require("process");
 const { getFenceBoundary, isDelimiterLine, isPotentialTableRow, splitTableCells } = require("./check-tables.js");
 
+/**
+ * Check if a line sits in a GFM table context by checking surrounding lines
+ * for a header+delimiter pair.
+ *
+ * @param {string[]} lines - Content split by newline.
+ * @param {number} lineIndex - Index of the line to check.
+ * @returns {boolean} True if the line is part of a pipe table.
+ */
 function isTableContext(lines, lineIndex) {
   const line = lines[lineIndex];
   if (lineIndex + 1 < lines.length && isDelimiterLine(lines[lineIndex + 1])) {
@@ -147,6 +155,14 @@ function validateFile(filePath) {
   return validatePipes(content);
 }
 
+/**
+ * CLI entry point. Processes file paths from argv and exits with
+ * code 0 if all files processed successfully (diagnostics are warnings,
+ * not errors). Exits with code 1 on file read errors.
+ *
+ * @param {string[]} [argv=process.argv.slice(2)] - CLI arguments (file paths).
+ * @returns {void} Sets process.exitCode.
+ */
 function main(argv = process.argv.slice(2)) {
   if (argv.length === 0) {
     console.error("Usage: node check-pipes.js <filePath...>");

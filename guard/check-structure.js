@@ -29,6 +29,16 @@ const { splitTableCells, splitTableCellsForStyle, isPotentialTableRow, isTableBo
 
 const VALID_MODES = ["--snapshot", "--check", "--guard", "--verify"];
 
+/**
+ * Extract all fenced code blocks from markdown content.
+ *
+ * Returns an array of fence objects with opener details, closer status,
+ * and line positions. Unclosed fences have closer=null and closeLine
+ * set to the last line of content.
+ *
+ * @param {string} content - Markdown file text.
+ * @returns {Array<{opener: string, length: number, style: string, info: string, closer: string|null, openLine: number, closeLine: number}>}
+ */
 function extractFences(content) {
   const fences = [];
   const lines = content.split("\n");
@@ -81,6 +91,13 @@ function extractFences(content) {
   return fences;
 }
 
+/**
+ * Parse a single GFM table row into cells and count columns.
+ *
+ * @param {string} line - A table row line.
+ * @param {boolean} [hasOuterPipes=true] - Whether the row uses leading/trailing |.
+ * @returns {{cells: string[], colCount: number}} Parsed row data.
+ */
 function parseTableRow(line, hasOuterPipes = true) {
   const cells = hasOuterPipes
     ? splitTableCells(line)
@@ -88,6 +105,16 @@ function parseTableRow(line, hasOuterPipes = true) {
   return { cells, colCount: cells.length };
 }
 
+/**
+ * Extract all GFM tables from markdown content.
+ *
+ * Returns an array of table objects, each containing parsed header,
+ * delimiter, and body rows. Ignores table-shaped content inside
+ * fenced code blocks.
+ *
+ * @param {string} content - Markdown file text.
+ * @returns {Array<{header: {cells: string[], colCount: number}, delimiter: {cells: string[], colCount: number}, rows: Array<{cells: string[], colCount: number}>}>}
+ */
 function extractTables(content) {
   const tables = [];
   const lines = content.split("\n");
@@ -121,6 +148,16 @@ function extractTables(content) {
   return tables;
 }
 
+/**
+ * Build a structural snapshot of fences and tables in content.
+ *
+ * The snapshot is a serializable object used for drift detection:
+ * comparing a pre-formatting snapshot against a post-formatting
+ * snapshot detects structural changes caused by formatting.
+ *
+ * @param {string} content - Markdown file text.
+ * @returns {{fenceCount: number, fences: Array<{length: number, style: string, info: string, hasInfo: boolean, isClosed: boolean}>, tableCount: number, tables: Array<{headerCols: number, delimiterCols: number, rowCols: number[], headerDelimiterMatch: boolean, rowsMatch: boolean}>}}
+ */
 function buildSnapshot(content) {
   const fences = extractFences(content);
   const tables = extractTables(content);
@@ -138,6 +175,21 @@ function buildSnapshot(content) {
   };
 }
 
+/**
+ * Validate fence and table structure in markdown content.
+ *
+ * Checks for:
+ * - Unclosed fences
+ * - Empty language tags on fence openers
+ * - Backticks in backtick fence info strings
+ * - Long fences containing GFM table structure (heuristic for
+ *   misattached closers)
+ * - Table header/delimiter column count mismatches
+ * - Table data row column count mismatches
+ *
+ * @param {string} content - Markdown file text.
+ * @returns {string[]} Error/warning messages. Empty array if valid.
+ */
 function validateStructure(content) {
   const lines = content.split("\n");
   const fences = extractFences(content);
@@ -186,20 +238,50 @@ function validateStructure(content) {
   return errors;
 }
 
+/**
+ * Get the path to the structural snapshot file for a given markdown file.
+ *
+ * @param {string} filePath - Path to the markdown file.
+ * @returns {string} Snapshot file path (appends .structure.json).
+ */
 function getSnapshotPath(filePath) { return filePath + ".structure.json"; }
 
+/**
+ * Load a structural snapshot from disk.
+ *
+ * @param {string} filePath - Path to the markdown file (snapshot path derived from it).
+ * @returns {object|null} Parsed snapshot object, or null if not found or invalid.
+ */
 function loadSnapshot(filePath) {
   const path = getSnapshotPath(filePath);
   if (!existsSync(path)) return null;
   try { return JSON.parse(readFileSync(path, "utf8")); } catch { return null; }
 }
 
+/**
+ * Save a structural snapshot to disk.
+ *
+ * @param {string} filePath - Path to the markdown file (snapshot path derived from it).
+ * @param {object} snapshot - Snapshot object from buildSnapshot.
+ * @returns {string} Path where the snapshot was written.
+ */
 function saveSnapshot(filePath, snapshot) {
   const path = getSnapshotPath(filePath);
   writeFileSync(path, JSON.stringify(snapshot, null, 2) + "\n");
   return path;
 }
 
+/**
+ * Compare two structural snapshots and report differences.
+ *
+ * Compares fence count, table count, individual fence properties
+ * (length, style, info string), and table column counts.
+ * Returns an array of human-readable drift descriptions.
+ *
+ * @param {{fenceCount: number, fences: Array, tableCount: number, tables: Array}} before - Pre-formatting snapshot.
+ * @param {{fenceCount: number, fences: Array, tableCount: number, tables: Array}} after - Post-formatting snapshot.
+ * @returns {string[]} Drift descriptions. Empty array if snapshots match.
+ */
 function compareSnapshots(before, after) {
   const drift = [];
   if (before.fenceCount !== after.fenceCount) drift.push(`Fence count changed: ${before.fenceCount} -> ${after.fenceCount}`);
@@ -223,6 +305,13 @@ function compareSnapshots(before, after) {
   return drift;
 }
 
+/**
+ * CLI entry point. Processes --snapshot, --check, --guard, or --verify
+ * modes for a single file. Exits with code 0 on success, 1 on failure.
+ *
+ * @param {string[]} [argv=process.argv.slice(2)] - CLI arguments (mode + file path).
+ * @returns {void} Exits process with code.
+ */
 function main(argv = process.argv.slice(2)) {
   const mode = argv[0];
   const filePath = argv[1];
