@@ -8,6 +8,8 @@ on:
       - '.gitignore'
       - '.githooks/**'
       - '.mdfmtignore'
+      - 'README.md'
+      - 'SECURITY.md'
   pull_request:
     branches: [main]
 
