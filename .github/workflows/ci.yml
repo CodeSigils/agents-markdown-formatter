@@ -14,15 +14,23 @@ concurrency:
 jobs:
   test:
     runs-on: ubuntu-latest
+    env:
+      CHECK_BASE_REF: origin/main
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
-          node-version: '24'
+          node-version-file: .node-version
           cache: 'npm'
           cache-dependency-path: package-lock.json
       - run: npm ci
-      - run: npm test
+      - run: npm run test:structural
+      - run: node --test test/unit/*.test.js
+      - run: node test/integration/cli.test.js
+      - run: npm run format:check
+      - run: bash scripts/staged-install-verify.sh
       - run: npm audit --audit-level=high
 
   publish:
@@ -34,9 +42,11 @@ jobs:
       id-token: write
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
-          node-version: '24'
+          node-version-file: .node-version
           registry-url: 'https://registry.npmjs.org'
           cache: 'npm'
           cache-dependency-path: package-lock.json

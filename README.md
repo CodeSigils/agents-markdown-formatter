@@ -27,6 +27,7 @@ any system with Node.js >=24.
 npm install -g zero-md-formatter
 mdfmt --fix README.md
 ```
+> Requires Node.js >=24. Zero *runtime* npm dependencies — no config file, no plugin system.
 
 ### Use via npx (no install)
 
@@ -71,6 +72,15 @@ node src/index.js --fix --guard README.md
 - Unescaped inline-code pipes in table rows
 - Adjacent-pipe table hazards (`||` → `| |`)
 - Pre/post structural drift detection and rollback when `--guard` is used
+
+---
+
+### What it doesn't do
+
+- **No config file** — no `.prettierrc`, `.markdownlintrc`, or similar. Opinionated defaults only.
+- **No dialect extensions** — no Obsidian wiki-links, Mermaid, Pandoc, or frontmatter semantics.
+- **No JSX/MDX validation** — formats Markdown containers only; JSX inside is passed through unchecked.
+- **No plugin system** — zero runtime dependencies means no extension points.
 
 ---
 
