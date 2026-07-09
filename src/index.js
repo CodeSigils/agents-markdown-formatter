@@ -24,7 +24,7 @@
 "use strict";
 
 const { readdirSync, statSync, existsSync, readFileSync, writeFileSync, copyFileSync, mkdtempSync, rmSync } = require("fs");
-const { join, resolve, extname, basename } = require("path");
+const { join, resolve, relative, extname, basename } = require("path");
 const { tmpdir } = require("os");
 
 const { formatContent } = require("./format-content.mjs");
@@ -82,6 +82,11 @@ Options:
   --audit-tables    Print table row cell counts and pipe hazards without writing
   --no-repair       In write modes, report repairable table issues instead of modifying them
   --help, -h        Show this help
+
+File exclusion:
+  Create .mdfmtignore in the current directory (one pattern per line,
+  # for comments). Patterns ending with / match directories; *
+  matches any characters except /. Used by --all and explicit paths.
 `);
 }
 
@@ -232,6 +237,54 @@ function runScript(script, ...scriptArgs) {
 
 function isMarkdownFile(filePath) {
   return MARKDOWN_EXTENSIONS.has(extname(filePath));
+}
+
+/**
+ * Load ignore patterns from .mdfmtignore in the given directory.
+ * Returns an empty array if the file doesn't exist.
+ *
+ * Format: one pattern per line, # for comments, blank lines ignored.
+ * Patterns ending with / match directories (prefix). Patterns containing *
+ * are treated as globs where * matches any non-/ characters.
+ * Everything else is an exact path match.
+ *
+ * @param {string} cwd Directory to look for .mdfmtignore
+ * @returns {string[]} Normalized patterns
+ */
+function loadIgnorePatterns(cwd) {
+  const ignorePath = join(cwd, ".mdfmtignore");
+  if (!existsSync(ignorePath)) return [];
+  const content = readFileSync(ignorePath, "utf8");
+  return content.split("\n")
+    .map((line) => line.trim())
+    .filter((line) => line && !line.startsWith("#"));
+}
+
+/**
+ * Check if a relative path matches any ignore pattern.
+ *
+ * @param {string} relPath Relative path to check
+ * @param {string[]} patterns Ignore patterns
+ * @returns {boolean} True if the path should be ignored
+ */
+function matchesIgnorePattern(relPath, patterns) {
+  for (const p of patterns) {
+    // Directory prefix: patterns ending in /
+    if (p.endsWith("/")) {
+      const dir = p.slice(0, -1);
+      if (relPath === dir || relPath.startsWith(dir + "/")) return true;
+      continue;
+    }
+    // Glob with *: match non-/ characters
+    if (p.includes("*")) {
+      const re = new RegExp("^" + p.replace(/\*/g, "[^/]*") + "$");
+      if (re.test(relPath)) return true;
+      continue;
+    }
+    // Exact match or path prefix
+    if (relPath === p || relPath.startsWith(p + "/")) return true;
+  }
+  return false;
 }
 
 /**
@@ -555,22 +608,29 @@ function isWriteMode(args) {
   return true; // no read-only flag → write mode (default)
 }
 
-function findMarkdownFiles(dir) {
+function findMarkdownFiles(dir, ignorePatterns = [], cwd = null) {
+  const base = cwd || dir;
   const files = [];
   for (const entry of readdirSync(dir, { withFileTypes: true })) {
     const full = join(dir, entry.name);
     if (entry.isDirectory()) {
       if (!["node_modules", ".git"].includes(entry.name) && !entry.name.startsWith(".")) {
-        files.push(...findMarkdownFiles(full));
+        const rel = relative(base, full);
+        if (!matchesIgnorePattern(rel, ignorePatterns)) {
+          files.push(...findMarkdownFiles(full, ignorePatterns, base));
+        }
       }
     } else if (isMarkdownFile(entry.name)) {
-      files.push(full);
+      const rel = relative(base, full);
+      if (!matchesIgnorePattern(rel, ignorePatterns)) {
+        files.push(full);
+      }
     }
   }
   return files;
 }
 
-function resolveInputFiles(inputs, recursive) {
+function resolveInputFiles(inputs, recursive, ignorePatterns = []) {
   const files = [];
   for (const input of inputs.length > 0 ? inputs : ["."]) {
     const absolute = resolve(input);
@@ -578,9 +638,12 @@ function resolveInputFiles(inputs, recursive) {
     const stat = statSync(absolute);
     if (stat.isDirectory()) {
       if (!recursive) throw new Error(`Directory input requires --all: ${input}`);
-      files.push(...findMarkdownFiles(absolute));
+      files.push(...findMarkdownFiles(absolute, ignorePatterns));
     } else if (isMarkdownFile(absolute)) {
-      files.push(absolute);
+      const rel = relative(process.cwd(), absolute);
+      if (!matchesIgnorePattern(rel, ignorePatterns)) {
+        files.push(absolute);
+      }
     }
   }
   return [...new Set(files)].sort();
@@ -806,7 +869,8 @@ function main(argv = process.argv) {
     return 0;
   }
 
-  const files = resolveInputFiles(args._, args.all);
+  const ignorePatterns = loadIgnorePatterns(process.cwd());
+  const files = resolveInputFiles(args._, args.all, ignorePatterns);
   if (files.length === 0) throw new Error("No markdown files to process.");
 
   let success = 0;
@@ -843,4 +907,6 @@ module.exports = {
   auditTables,
   hasTableWithEmptyCells,
   isWriteMode,
+  loadIgnorePatterns,
+  matchesIgnorePattern,
 };

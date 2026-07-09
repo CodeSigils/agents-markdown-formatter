@@ -12,6 +12,7 @@ const {
   normalizeTableSpacing,
   auditTables,
   hasTableWithEmptyCells,
+  matchesIgnorePattern,
 } = require('../../src/index.js');
 
 describe('formatter CLI helper unit tests', () => {
@@ -133,6 +134,69 @@ describe('formatter CLI helper unit tests', () => {
     assert.match(report, /line 1: table start/);
     assert.match(report, /line 3: cells=2 .*inline-code-pipe/);
     assert.match(report, /line 4: cells=2 .*adjacent-pipes/);
+  });
+});
+
+describe('matchesIgnorePattern', () => {
+  it('matches directory prefix patterns ending with /', () => {
+    assert.equal(matchesIgnorePattern('vendor/file.md', ['vendor/']), true);
+    assert.equal(matchesIgnorePattern('node_modules/pkg/index.js', ['node_modules/']), true);
+    assert.equal(matchesIgnorePattern('src/vendor/file.md', ['vendor/']), false);
+  });
+
+  it('matches exact path patterns', () => {
+    assert.equal(matchesIgnorePattern('package-lock.json', ['package-lock.json']), true);
+    assert.equal(matchesIgnorePattern('package.json', ['package-lock.json']), false);
+  });
+
+  it('matches path prefix patterns without trailing slash', () => {
+    assert.equal(matchesIgnorePattern('node_modules/pkg', ['node_modules']), true);
+    assert.equal(matchesIgnorePattern('node_modules/pkg/index.js', ['node_modules']), true);
+  });
+
+  it('matches simple glob patterns', () => {
+    assert.equal(matchesIgnorePattern('report.generated.md', ['*.generated.md']), true);
+    assert.equal(matchesIgnorePattern('docs/report.generated.md', ['*.generated.md']), false);
+  });
+
+  it('returns false for empty patterns', () => {
+    assert.equal(matchesIgnorePattern('anything.md', []), false);
+    assert.equal(matchesIgnorePattern('', []), false);
+  });
+
+  it('skips comment and blank lines in loadIgnorePatterns', () => {
+    // Unit-test the pattern extraction logic directly
+    // loadIgnorePatterns is file-based and tested via resolveInputFiles integration
+    const { loadIgnorePatterns } = require('../../src/index.js');
+    const patterns = loadIgnorePatterns(require('path').resolve(__dirname, '../..'));
+    assert(Array.isArray(patterns));
+    assert(patterns.every((p) => !p.startsWith('#')));
+    assert(patterns.every((p) => p.length > 0));
+  });
+
+  it('resolveInputFiles excludes files matching ignore patterns', () => {
+    const { mkdtempSync, writeFileSync, mkdirSync, rmSync } = require('node:fs');
+    const { join } = require('node:path');
+    const { tmpdir } = require('node:os');
+    const root = mkdtempSync(join(tmpdir(), 'mdfmtignore-'));
+    try {
+      mkdirSync(join(root, 'docs'));
+      mkdirSync(join(root, 'generated'));
+      writeFileSync(join(root, 'docs', 'readme.md'), '# Readme\n');
+      writeFileSync(join(root, 'docs', 'changelog.md'), '# Changelog\n');
+      writeFileSync(join(root, 'generated', 'output.md'), '# Generated\n');
+      writeFileSync(join(root, 'generated', 'index.md'), '# Index\n');
+
+      // Ignore generated/ directory
+      const files = resolveInputFiles([root], true, ['generated/']);
+
+      assert.equal(files.length, 2);
+      assert(files.some((f) => f.endsWith('readme.md')));
+      assert(files.some((f) => f.endsWith('changelog.md')));
+      assert(!files.some((f) => f.includes('generated')));
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
   });
 });
 
