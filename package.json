@@ -1,6 +1,6 @@
 {
   "name": "zero-md-formatter",
-  "version": "1.4.2",
+  "version": "1.4.3",
   "description": "Zero-dependency GFM and MDX formatter with structural guardrails — optimized for AI-agent workflows",
   "private": false,
   "keywords": [
@@ -28,6 +28,7 @@
     "url": "git+https://github.com/CodeSigils/zero-md-formatter.git"
   },
   "license": "MIT",
+  "author": "CodeSigils <toolsoftrade.web@gmail.com>",
   "publishConfig": {
     "access": "public",
     "provenance": true
