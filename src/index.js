@@ -325,7 +325,8 @@ function matchesIgnorePattern(relPath, patterns) {
     }
     // Glob with *: match non-/ characters
     if (p.includes("*")) {
-      const re = new RegExp("^" + p.replace(/\*/g, "[^/]*") + "$");
+      const escaped = p.replace(/[|\\{}()[\]^$+?.]/g, "\\$&");
+      const re = new RegExp("^" + escaped.replace(/\*/g, "[^/]*") + "$");
       if (re.test(relPath)) return true;
       continue;
     }
@@ -937,7 +938,7 @@ function processFile(filePath, args) {
       // --guard + --fix: skip structural snapshot (tables unreliable), still format
       return writeFormatting(filePath) && checkIdempotenceReadOnly(filePath);
     }
-    if (args.check) return checkFormatting(filePath);
+    if (args.check) return runScript("check-structure.js", "--verify", filePath) && runScript("check-fences.js", filePath) && checkFormatting(filePath);
     return writeFormatting(filePath) && checkIdempotenceReadOnly(filePath);
   }
 

@@ -57,6 +57,15 @@ const skillMd = files["SKILL.md"];
 const indexJs = files["src/index.js"];
 const formatContent = files["src/format-content.mjs"];
 const pkgJson = files["package.json"];
+const RUNTIME_PAYLOAD_FILES = [
+  "SKILL.md",
+  "src/index.js",
+  "src/format-content.mjs",
+  "guard/check-structure.js",
+  "guard/check-fences.js",
+  "guard/check-tables.js",
+  "guard/check-pipes.js",
+];
 
 // Node.js runtime min version
 const runtimeMinNodeVersion = indexJs ? extractRuntimeNodeMinVersion(indexJs) : null;
@@ -149,16 +158,14 @@ const { join } = require("path");
 const { ROOT } = require("./validators/common");
 
 try {
-  const stagedIndex = readFileSync(join(ROOT, STAGED_DIR, "src/index.js"), "utf8");
-  const sourceIndex = readFileSync(join(ROOT, "src/index.js"), "utf8");
-  const stagedFormatter = readFileSync(join(ROOT, STAGED_DIR, "src/format-content.mjs"), "utf8");
-  const sourceFormatter = readFileSync(join(ROOT, "src/format-content.mjs"), "utf8");
-  if (
-    (stagedIndex && sourceIndex && stagedIndex !== sourceIndex) ||
-    (stagedFormatter && sourceFormatter && stagedFormatter !== sourceFormatter)
-  ) {
+  const stalePayloadFiles = RUNTIME_PAYLOAD_FILES.filter((file) => {
+    const stagedContent = readFileSync(join(ROOT, STAGED_DIR, file), "utf8");
+    const sourceContent = readFileSync(join(ROOT, file), "utf8");
+    return stagedContent !== sourceContent;
+  });
+  if (stalePayloadFiles.length > 0) {
     warnings.push(
-      "staged-install/ is stale — run bash scripts/staged-install-verify.sh to regenerate"
+      `staged-install/ is stale (${stalePayloadFiles.join(", ")}) — run bash scripts/staged-install-verify.sh to regenerate`
     );
   }
 } catch { /* staged dir or files may not exist — not an error */ }

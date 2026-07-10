@@ -28,4 +28,4 @@ Do not file public issues for security vulnerabilities.
 - **2FA on npm** — publishing requires OTP or granular token. Note: bypass-2fa granular tokens are deprecated and will lose direct publish capability in January 2027. Plan to migrate to trusted publishing (OIDC) before then.
 - **Provenance** — `publishConfig.provenance: true` for CI publishes (GitHub OIDC)
 - **Minimal runtime** — pure Node.js >=24, no native bindings
-- **No postinstall scripts** — `prepare` only sets git hooks locally
+- **No install lifecycle scripts** — git hooks are installed explicitly with `npm run install-hooks`

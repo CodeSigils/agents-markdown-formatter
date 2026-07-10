@@ -571,6 +571,10 @@ describe('markdown formatter CLI integration', () => {
       assert.notStrictEqual(validateResult.status, 0);
       assert.match(validateResult.stdout + validateResult.stderr, /Unclosed fence/);
 
+      const checkResult = runCli(['--check', file]);
+      assert.notStrictEqual(checkResult.status, 0);
+      assert.match(checkResult.stdout + checkResult.stderr, /Unclosed fence/);
+
       // --fix should still format around unclosed fences (fence check is separate)
       const fixResult = runCli(['--fix', file]);
       assert.equal(fixResult.status, 0, fixResult.stdout + fixResult.stderr);

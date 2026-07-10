@@ -166,6 +166,14 @@ describe('matchesIgnorePattern', () => {
     assert.equal(matchesIgnorePattern('docs/report.generated.md', ['*.generated.md']), false);
   });
 
+  it('treats non-star glob characters literally', () => {
+    assert.equal(matchesIgnorePattern('foo.md', ['*.md']), true);
+    assert.equal(matchesIgnorePattern('fooamd', ['*.md']), false);
+    assert.equal(matchesIgnorePattern('fooxmd', ['*.md']), false);
+    assert.equal(matchesIgnorePattern('docs/file+draft.md', ['docs/file+*.md']), true);
+    assert.equal(matchesIgnorePattern('docs/filexdraft.md', ['docs/file+*.md']), false);
+  });
+
   it('returns false for empty patterns', () => {
     assert.equal(matchesIgnorePattern('anything.md', []), false);
     assert.equal(matchesIgnorePattern('', []), false);
