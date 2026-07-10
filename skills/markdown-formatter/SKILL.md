@@ -49,15 +49,13 @@ mdfmt [options] <path...>
 Where `<skill-dir>` resolves to your agent's skill directory, or point it at
 the repo root (where `src/index.js` lives):
 
-| Platform                | Skill directory                        | Install command                                                                                                               |
-| ----------------------- | -------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
-| Hermes Agent            | `~/.hermes/skills/markdown-formatter/` | `hermes skills tap add CodeSigils/zero-md-formatter && hermes skills install CodeSigils/zero-md-formatter/markdown-formatter` |
-| npm global install      | npm package root                       | `npm install -g zero-md-formatter`                                                                                            |
-| Claude Code             | `.claude/skills/markdown-formatter/`   | `npm install -g zero-md-formatter`; or `cp` the package root                                                                  |
-| Codex CLI               | `~/.codex/skills/markdown-formatter/`  | `npm install -g zero-md-formatter`                                                                                            |
-| Gemini CLI / `.agents/` | `.agents/skills/markdown-formatter/`   | `npm install -g zero-md-formatter`                                                                                            |
-| OpenCode                | `.opencode/skills/markdown-formatter/` | `npm install -g zero-md-formatter`                                                                                            |
-| Source checkout         | repo root (`src/index.js` directly)    | `git clone` + `node src/index.js --fix README.md`                                                                             |
+| Platform           | Skill directory                                                                    | Install command                                                                                                               |
+| ------------------ | ---------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| Hermes Agent       | `~/.hermes/skills/markdown-formatter/`                                             | `hermes skills tap add CodeSigils/zero-md-formatter && hermes skills install CodeSigils/zero-md-formatter/markdown-formatter` |
+| Codex CLI          | `.agents/skills/markdown-formatter/` or `$HOME/.agents/skills/markdown-formatter/` | `cp -R skills/markdown-formatter .agents/skills/markdown-formatter`                                                           |
+| npm global install | npm package root                                                                   | `npm install -g zero-md-formatter`                                                                                            |
+| Other agents       | Runtime-specific skill directory                                                   | `npm install -g zero-md-formatter`; or copy `skills/markdown-formatter/` if the runtime supports local agent skills           |
+| Source checkout    | repo root (`src/index.js` directly)                                                | `git clone` + `node src/index.js --fix README.md`                                                                             |
 
 The CLI is a standalone Node.js module — it has no runtime dependencies and does
 not require any agent platform to function. Install it wherever Node.js >=24 is

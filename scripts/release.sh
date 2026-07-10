@@ -46,24 +46,29 @@ echo ""
 # ---------------------------------------------------------------------------
 # Precondition 0: sync SKILL.md frontmatter version from package.json
 # ---------------------------------------------------------------------------
-info "Syncing SKILL.md version to ${VERSION} ..."
+info "Syncing skill metadata to ${VERSION} ..."
 node scripts/sync-version.js
+node scripts/sync-tap-payload.js
 SKILL_MD_VERSION="$(sed -n 's/^version: *//p' SKILL.md)"
 if [[ -z "${SKILL_MD_VERSION}" ]]; then
   die "SKILL.md is missing a 'version:' field in its frontmatter."
 fi
+TAP_SKILL_MD_VERSION="$(sed -n 's/^version: *//p' skills/markdown-formatter/SKILL.md)"
+if [[ "${TAP_SKILL_MD_VERSION}" != "${SKILL_MD_VERSION}" ]]; then
+  die "skills/markdown-formatter/SKILL.md version (${TAP_SKILL_MD_VERSION:-missing}) does not match SKILL.md (${SKILL_MD_VERSION})."
+fi
 
-# If SKILL.md was modified by the sync, commit it now so the
+# If skill metadata was modified by the sync, commit it now so the
 # working tree is clean for the preconditions that follow.
 # This handles the manual-bump case (edit package.json directly
-# but forget SKILL.md). When using 'npm version' the version
+# but forget skill metadata). When using 'npm version' the version
 # lifecycle script already handles this before release.sh runs.
-if ! git diff --quiet SKILL.md; then
-  git add SKILL.md
-  git commit -m "sync SKILL.md version to ${VERSION}" --no-verify
-  echo "  ✓ SKILL.md synced and committed (version ${SKILL_MD_VERSION})"
+if ! git diff --quiet -- SKILL.md skills/markdown-formatter; then
+  git add SKILL.md skills/markdown-formatter
+  git commit -m "sync skill metadata to ${VERSION}" --no-verify
+  echo "  ✓ Skill metadata synced and committed (version ${SKILL_MD_VERSION})"
 else
-  echo "  ✓ SKILL.md version matches (${SKILL_MD_VERSION})"
+  echo "  ✓ Skill metadata matches (${SKILL_MD_VERSION})"
 fi
 
 echo ""
@@ -104,7 +109,7 @@ echo "  ✓ Authenticated"
 info "Checking release commit isolation ..."
 
 # Files that are allowed to change in a release commit
-ALLOWED_RELEASE_FILES="^package\\.json$|^package-lock\\.json$|^README\\.md$|^SKILL\\.md$"
+ALLOWED_RELEASE_FILES="^package\\.json$|^package-lock\\.json$|^README\\.md$|^SKILL\\.md$|^skills/markdown-formatter/SKILL\\.md$"
 
 # Get files changed in HEAD vs its parent
 PARENT_SHA="$(git rev-parse HEAD~1 2>/dev/null || true)"
@@ -127,7 +132,7 @@ else
   if [[ "${VIOLATIONS}" -gt 0 ]]; then
     echo ""
     die "Release commit changes ${VIOLATIONS} file(s) outside the version-bump allowlist.
-  Allowed: package.json, package-lock.json, README.md, SKILL.md
+  Allowed: package.json, package-lock.json, README.md, SKILL.md, skills/markdown-formatter/SKILL.md
   Fix: 1. Commit runtime changes separately (not in the release commit)
         2. Then make a clean version-bump commit with only the files above"
   fi

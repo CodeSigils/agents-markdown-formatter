@@ -21,6 +21,7 @@ const PLAN_EXPECTED_REPO_SHAPE = new Set([
   "scripts/check-consistency.js",
   "scripts/release.sh",
   "scripts/runtime-payload.js",
+  "scripts/sync-tap-payload.js",
   "scripts/staged-install-verify.sh",
   "SKILL.md",
   "skills/markdown-formatter/SKILL.md",

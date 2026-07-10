@@ -156,11 +156,16 @@ try {
     return stagedContent !== sourceContent;
   });
   if (stalePayloadFiles.length > 0) {
-    warnings.push(
+    errors.push(
       `skills/markdown-formatter/ is stale (${stalePayloadFiles.join(", ")}) — run bash scripts/staged-install-verify.sh to regenerate`
     );
   }
-} catch { /* staged dir or files may not exist — not an error */ }
+} catch (e) {
+  errors.push(
+    `skills/markdown-formatter/ payload is missing or unreadable — ` +
+    `run bash scripts/staged-install-verify.sh to regenerate (${e.message})`
+  );
+}
 
 // CLI flag documentation coverage
 if (indexJs && skillMd) {

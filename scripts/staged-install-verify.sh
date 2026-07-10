@@ -26,30 +26,10 @@ DEV_ONLY_PATHS=(
     "references/"
 )
 
-# Clean and create staging directory
-rm -rf "$STAGE_DIR"
-mkdir -p "$STAGE_DIR"
-
 echo "Staging runtime allowlist for Hermes tap install..."
 echo "=================================================="
-
-# Copy each item in the allowlist
-for item in "${RUNTIME_ALLOWLIST[@]}"; do
-    src_path="$SOURCE_DIR/$item"
-    dest_path="$STAGE_DIR/$item"
-    
-    # Create parent directories if needed
-    mkdir -p "$(dirname "$dest_path")"
-    
-    # Copy the file/directory
-    if [[ -d "$src_path" ]]; then
-        cp -r "$src_path" "$dest_path"
-    else
-        cp "$src_path" "$dest_path"
-    fi
-    
-    echo "✓ Copied: $item"
-done
+node scripts/sync-tap-payload.js
+printf '%s\n' "${RUNTIME_ALLOWLIST[@]}" | sed 's/^/✓ Copied: /'
 
 echo ""
 echo "Staged file list with sizes:"

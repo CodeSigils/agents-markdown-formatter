@@ -205,16 +205,41 @@ of `--check` for auto-repair.
 </details>
 
 <details>
-<summary><b>Claude Code / Codex CLI / OpenCode / Gemini CLI</b></summary>
+<summary><b>Codex CLI</b></summary>
+
+For a repo-specific Codex skill, copy the tap payload into `.agents/skills`:
 
 ```bash
-# Clone the repo or copy the skill directory
+mkdir -p .agents/skills
+cp -R skills/markdown-formatter .agents/skills/markdown-formatter
+```
+
+For a user-wide Codex skill, copy it to `$HOME/.agents/skills` instead.
+Codex also works directly with the CLI:
+
+```bash
+npm install -g zero-md-formatter
+mdfmt --fix --guard README.md
+```
+</details>
+
+<details>
+<summary><b>Claude Code / OpenCode / Gemini CLI</b></summary>
+
+```bash
+npm install -g zero-md-formatter
+mdfmt --fix --guard README.md
+```
+
+Or clone the source and point the agent at the CLI:
+
+```bash
 git clone https://github.com/CodeSigils/zero-md-formatter.git
-# Point at the source directory
 node zero-md-formatter/src/index.js --fix --guard README.md
 ```
 
-Or install via npm globally and use the `mdfmt` binary directly.
+If your agent runtime supports agentskills.io-compatible local skills, copy
+`skills/markdown-formatter/` to that runtime's documented skill directory.
 </details>
 
 ### Portability
