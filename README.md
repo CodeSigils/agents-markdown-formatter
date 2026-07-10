@@ -172,8 +172,22 @@ agentskills.io-formatted skills.
 <summary><b>Hermes Agent</b></summary>
 
 ```bash
+# Add repo as skill tap (one-time), then install
+hermes skills tap add CodeSigils/zero-md-formatter
 hermes skills install CodeSigils/zero-md-formatter/markdown-formatter --yes
+```
+
+Then use the formatter via npm (recommended — gives `mdfmt` binary):
+
+```bash
+npm install -g zero-md-formatter
 mdfmt --fix --guard README.md
+```
+
+Or run from source (no npm install):
+
+```bash
+node src/index.js --fix --guard README.md
 ```
 
 For auto-wiring on every `write_file` or `patch` call, add to `config.yaml`:
