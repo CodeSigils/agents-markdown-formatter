@@ -8,11 +8,10 @@
 
 const { spawnSync } = require("child_process");
 const { ROOT, extractFrontmatterVersion } = require("./common");
-
-const RUNTIME_DIRS = [""];
+const RUNTIME_PAYLOAD_FILES = require("../runtime-payload");
 
 function isRuntimeFile(file) {
-  return RUNTIME_DIRS.some((d) => file.startsWith(d));
+  return RUNTIME_PAYLOAD_FILES.includes(file);
 }
 
 function getChangedFilesSince(ref) {
@@ -20,7 +19,7 @@ function getChangedFilesSince(ref) {
     "git", ["diff", "--name-only", ref, "HEAD"],
     { cwd: ROOT, encoding: "utf8", timeout: 10000 }
   );
-  if (result.error || result.status !== 0) return null;
+  if (result.status !== 0) return null;
   return result.stdout.trim().split("\n").filter((f) => f.length > 0);
 }
 
@@ -29,7 +28,7 @@ function getLatestTagVersion() {
     "git", ["tag", "-l", "v*", "--sort=-version:refname"],
     { cwd: ROOT, encoding: "utf8", timeout: 10000 }
   );
-  if (result.error || result.status !== 0 || !result.stdout.trim()) return null;
+  if (result.status !== 0 || !result.stdout.trim()) return null;
   const tag = result.stdout.trim().split("\n")[0];
   return tag.replace(/^v/, "");
 }

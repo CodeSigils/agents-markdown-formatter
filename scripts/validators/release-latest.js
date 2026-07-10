@@ -23,7 +23,7 @@ function validateReleaseLatest() {
     "git", ["tag", "-l", "v*", "--sort=-version:refname"],
     { encoding: "utf8", timeout: 10000 }
   );
-  if (gitResult.error || gitResult.status !== 0 || !gitResult.stdout.trim()) {
+  if (gitResult.status !== 0 || !gitResult.stdout.trim()) {
     warnings.push("release-latest: no v* git tags found — skipping isLatest check");
     return { errors, warnings };
   }
@@ -36,7 +36,7 @@ function validateReleaseLatest() {
     "gh", ["release", "list", "-L", "10", "--json", "tagName,isLatest"],
     { encoding: "utf8", timeout: 15000 }
   );
-  if (ghResult.error || ghResult.status !== 0) {
+  if (ghResult.status !== 0) {
     warnings.push(
       "release-latest: gh CLI unavailable or not authenticated — skipping isLatest check"
     );
