@@ -127,7 +127,8 @@ Table and pipe safety is enforced by guard scripts alongside the formatter
   repair adjacent pipes automatically; read-only modes refuse to proceed when adjacent pipes are detected.
 - **Unclosed-fence preflight gate.** All CLI modes detect unclosed fences via `hasUnclosedFence()` before running
   table/pipe checks. When an unclosed fence is found, the CLI warns that table and pipe checks are unreliable and skips
-  them while continuing with fence validation and formatting. Run `--fences` to locate the unclosed fence opener.
+  them while continuing with fence validation. Read-only validation modes fail on the fence error without modifying the
+  file; write modes still format around the unclosed fence. Run `--fences` to locate the unclosed fence opener.
 - **Long-fence heuristic.** `check-structure.js` flags closed fences that span >40 lines and contain GFM table structure
   (header + delimiter pair). Such fences may have a closer belonging to a different opener, blinding table/pipe checks
   across the affected content.
