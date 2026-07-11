@@ -190,20 +190,57 @@ Or run from source (no npm install):
 node src/index.js --fix --guard README.md
 ```
 
-For auto-wiring on every `write_file` or `patch` call, add to `config.yaml`:
+For auto-wiring on every `write_file` or `patch` call, install a small hook
+wrapper:
+
+```bash
+mkdir -p "$HOME/.hermes/scripts"
+cat > "$HOME/.hermes/scripts/check-markdown.sh" <<'EOF'
+#!/usr/bin/env bash
+set -euo pipefail
+
+path="${file_path:-}"
+
+if [ -z "$path" ]; then
+  path="$(
+    node -e '
+      const fs = require("fs");
+      const raw = fs.readFileSync(0, "utf8").trim();
+      if (!raw) process.exit(0);
+      const payload = JSON.parse(raw);
+      process.stdout.write(
+        payload.file_path ||
+        payload.path ||
+        payload.tool_input?.file_path ||
+        payload.tool_input?.path ||
+        ""
+      );
+    '
+  )"
+fi
+
+case "$path" in
+  *.md|*.markdown|*.mdx) mdfmt --check "$path" ;;
+esac
+EOF
+chmod +x "$HOME/.hermes/scripts/check-markdown.sh"
+```
+
+Then add the hook to `config.yaml`:
 
 ```yaml
 hooks:
   post_tool_call:
-    - command: mdfmt --check
+    - command: ~/.hermes/scripts/check-markdown.sh
       matcher: write_file
-    - command: mdfmt --check
+    - command: ~/.hermes/scripts/check-markdown.sh
       matcher: patch
 ```
 
-This runs `--check` (read-only) on every written file, blocking pipe hazards,
-fence errors, and formatting drift before they reach git. Use `--fix` instead
-of `--check` for auto-repair.
+This runs `--check` (read-only) on every written Markdown file, blocking pipe
+hazards, fence errors, and formatting drift before they reach git. To
+auto-repair instead, change the wrapper's `mdfmt --check "$path"` line to
+`mdfmt --fix "$path"`.
 </details>
 
 <details>
@@ -228,20 +265,40 @@ mdfmt --fix --guard README.md
 <details>
 <summary><b>Claude Code / OpenCode / Gemini CLI</b></summary>
 
+All three can run the formatter as a normal shell CLI:
+
 ```bash
 npm install -g zero-md-formatter
 mdfmt --fix --guard README.md
 ```
 
-Or clone the source and point the agent at the CLI:
+Or clone the source and run the bundled CLI directly:
 
 ```bash
 git clone https://github.com/CodeSigils/zero-md-formatter.git
 node zero-md-formatter/src/index.js --fix --guard README.md
 ```
 
-If your agent runtime supports agentskills.io-compatible local skills, copy
-`skills/markdown-formatter/` to that runtime's documented skill directory.
+For native Agent Skills support, copy the tap payload to the runtime's
+documented skill directory:
+
+```bash
+# Claude Code
+mkdir -p .claude/skills
+cp -R skills/markdown-formatter .claude/skills/markdown-formatter
+
+# OpenCode
+mkdir -p .opencode/skills
+cp -R skills/markdown-formatter .opencode/skills/markdown-formatter
+
+# Gemini CLI
+mkdir -p .gemini/skills
+cp -R skills/markdown-formatter .gemini/skills/markdown-formatter
+```
+
+OpenCode and Gemini CLI also discover `.agents/skills/markdown-formatter/`.
+Claude Code also supports `$HOME/.claude/skills/markdown-formatter/` for
+user-wide installs.
 </details>
 
 ### Portability
@@ -294,7 +351,7 @@ Run `mdfmt --doctor` to verify runtime readiness.
 
 ## Install payload
 
-The shipped package contains only:
+The shipped runtime payload contains:
 
 ```
 zero-md-formatter/
@@ -307,8 +364,9 @@ zero-md-formatter/
   guard/check-pipes.js
 ```
 
-Repository-only files (test/, scripts/, .github/) are excluded from the npm
-tarball via the `files` field in package.json.
+The npm tarball also includes package metadata, README.md, and LICENSE.
+Repository-only files (test/, scripts/, .github/) are excluded via the `files`
+field in package.json.
 
 ---
 
