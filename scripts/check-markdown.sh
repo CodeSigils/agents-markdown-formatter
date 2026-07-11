@@ -1,18 +1,8 @@
 #!/usr/bin/env bash
 # Hermes shell hook: check Markdown files with mdfmt --check on write_file/patch
 #
-# Setup:
-#   mkdir -p "$HOME/.hermes/scripts"
-#   cp scripts/check-markdown.sh "$HOME/.hermes/scripts/"
-#   chmod +x "$HOME/.hermes/scripts/check-markdown.sh"
-#
-# Then add to ~/.hermes/config.yaml:
-#   hooks:
-#     post_tool_call:
-#       - command: ~/.hermes/scripts/check-markdown.sh
-#         matcher: write_file
-#       - command: ~/.hermes/scripts/check-markdown.sh
-#         matcher: patch
+# Ships with the skill at ~/.hermes/skills/markdown-formatter/scripts/check-markdown.sh
+# Register in Hermes config.yaml hooks block, then this runs automatically.
 set -eo pipefail
 
 payload="$(cat -)"
