@@ -336,11 +336,14 @@ zero-md-formatter/
   guard/check-fences.js
   guard/check-tables.js
   guard/check-pipes.js
+  scripts/check-markdown.sh
 ```
 
-The npm tarball also includes package metadata, README.md, and LICENSE.
-Repository-only files (test/, scripts/, .github/) are excluded via the `files`
-field in package.json.
+The **npm tarball** also includes package metadata, README.md, and LICENSE.
+Repository-only files (test/, .github/) are excluded via the `files`
+field in package.json — `scripts/` is not shipped with npm, except
+`scripts/check-markdown.sh` which is included in the Hermes tap payload
+(skill install) but not the npm package.
 
 ---
 
