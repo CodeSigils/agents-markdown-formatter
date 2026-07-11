@@ -8,8 +8,9 @@
  * (via `gh release create` without --latest=false) steals the "latest" marker
  * from the actual newest version.
  *
- * Depends on: git, gh CLI (authenticated with GITHUB_TOKEN in CI, or user
- * login locally). When gh is unavailable, the check is skipped with a warning.
+ * Depends on: git, gh CLI (authenticated with GH_TOKEN/GITHUB_TOKEN in CI, or
+ * user login locally). When gh is unavailable locally, the check is skipped
+ * with a warning. In CI, gh failures are errors.
  */
 
 const { spawnSync } = require("child_process");
@@ -17,6 +18,7 @@ const { spawnSync } = require("child_process");
 function validateReleaseLatest() {
   const errors = [];
   const warnings = [];
+  const requireGithubReleaseCheck = process.env.CI === "true";
 
   // Get the highest semver git tag (v* tags sorted by semver descending)
   const gitResult = spawnSync(
@@ -37,9 +39,13 @@ function validateReleaseLatest() {
     { encoding: "utf8", timeout: 15000 }
   );
   if (ghResult.status !== 0) {
-    warnings.push(
-      "release-latest: gh CLI unavailable or not authenticated — skipping isLatest check"
-    );
+    const message =
+      "release-latest: gh CLI unavailable or not authenticated — cannot verify latest release";
+    if (requireGithubReleaseCheck) {
+      errors.push(message);
+    } else {
+      warnings.push(`${message}; skipping local isLatest check`);
+    }
     return { errors, warnings };
   }
 
@@ -47,12 +53,22 @@ function validateReleaseLatest() {
   try {
     releases = JSON.parse(ghResult.stdout.trim());
   } catch {
-    warnings.push("release-latest: failed to parse gh release list output");
+    const message = "release-latest: failed to parse gh release list output";
+    if (requireGithubReleaseCheck) {
+      errors.push(message);
+    } else {
+      warnings.push(message);
+    }
     return { errors, warnings };
   }
 
   if (!Array.isArray(releases) || releases.length === 0) {
-    warnings.push("release-latest: no GitHub Releases found");
+    const message = "release-latest: no GitHub Releases found";
+    if (requireGithubReleaseCheck) {
+      errors.push(message);
+    } else {
+      warnings.push(message);
+    }
     return { errors, warnings };
   }
 

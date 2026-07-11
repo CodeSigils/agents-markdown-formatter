@@ -197,6 +197,8 @@ hooks:
   post_tool_call:
     - command: mdfmt --check
       matcher: write_file
+    - command: mdfmt --check
+      matcher: patch
 ```
 
 This runs `--check` (read-only) on every written file, blocking pipe hazards,
