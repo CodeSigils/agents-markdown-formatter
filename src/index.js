@@ -935,9 +935,9 @@ function processFile(filePath, args) {
       return fencesValid;
     }
     if (args.guard) {
-      if (args.check) return runScript("check-structure.js", "--verify", filePath) && runScript("check-fences.js", filePath) && checkFormatting(filePath);
-      // --guard + --fix: skip structural snapshot (tables unreliable), still format
-      return writeFormatting(filePath) && checkIdempotenceReadOnly(filePath);
+      // A guard cannot establish a trustworthy before/after snapshot while a
+      // fence is open. Fail before writing instead of reporting guarded success.
+      return runScript("check-structure.js", "--verify", filePath) && runScript("check-fences.js", filePath);
     }
     if (args.check) return runScript("check-structure.js", "--verify", filePath) && runScript("check-fences.js", filePath) && checkFormatting(filePath);
     return writeFormatting(filePath) && checkIdempotenceReadOnly(filePath);

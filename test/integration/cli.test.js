@@ -583,6 +583,24 @@ describe('markdown formatter CLI integration', () => {
     }
   });
 
+  it('--fix --guard rejects an unclosed fence without modifying the file', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'markdown-formatter-guard-unclosed-'));
+    const file = join(dir, 'unclosed.md');
+    try {
+      const original = '# Unclosed\n\n```js\nconst value = 1;  \n';
+      writeFileSync(file, original);
+
+      const result = runCli(['--fix', '--guard', file]);
+
+      assert.notStrictEqual(result.status, 0);
+      assert.match(result.stdout + result.stderr, /unclosed fence/i);
+      assert.equal(readFileSync(file, 'utf8'), original);
+      assert.equal(existsSync(`${file}.structure.json`), false);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
   it('--dry-run remains read-only and fails when an unclosed fence is present', () => {
     const dir = mkdtempSync(join(tmpdir(), 'markdown-formatter-unclosed-dry-run-'));
     const file = join(dir, 'unclosed-dry-run.md');

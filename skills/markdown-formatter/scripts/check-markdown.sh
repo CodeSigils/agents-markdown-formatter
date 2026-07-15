@@ -15,12 +15,26 @@ case "$file_path" in
   *) printf '{}\n' && exit 0 ;;
 esac
 
-if command -v mdfmt &>/dev/null; then
-  mdfmt --fix --guard "$file_path"
-elif [[ -f "$HOME/.hermes/skills/markdown-formatter/src/index.js" ]]; then
-  node "$HOME/.hermes/skills/markdown-formatter/src/index.js" --fix --guard "$file_path"
-else
-  echo "[check-markdown] zero-md-formatter not found — skipping check" >&2
-fi
+run_formatter() {
+  local formatter_output
 
-printf '{}\n'
+  if ! formatter_output="$("$@" 2>&1)"; then
+    local context="[check-markdown] formatting failed for ${file_path}: ${formatter_output}"
+    printf '%s\n' "$context" >&2
+    jq -n --arg context "$context" '{context: $context}'
+    return 0
+  fi
+
+  [[ -n "$formatter_output" ]] && printf '%s\n' "$formatter_output" >&2
+  printf '{}\n'
+}
+
+if command -v mdfmt &>/dev/null; then
+  run_formatter mdfmt --fix --guard "$file_path"
+elif [[ -f "$HOME/.hermes/skills/markdown-formatter/src/index.js" ]]; then
+  run_formatter node "$HOME/.hermes/skills/markdown-formatter/src/index.js" --fix --guard "$file_path"
+else
+  context="[check-markdown] zero-md-formatter not found; ${file_path} was not formatted"
+  printf '%s\n' "$context" >&2
+  jq -n --arg context "$context" '{context: $context}'
+fi
