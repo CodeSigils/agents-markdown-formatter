@@ -925,7 +925,8 @@ function processFile(filePath, args) {
       `Table and pipe checks are unreliable (shared fence tracker blinds ` +
       `all downstream content). Run --fences to locate the unclosed fence.`
     );
-    // Still run fence validation and formatting, but skip table/pipe checks.
+    // Still run fence validation, but skip table/pipe checks. Unguarded write
+    // modes may continue formatting; guarded modes fail before writing.
     if (args.fences) return runStructuralValidation(filePath, true);
     if (args.validate) return runScript("check-structure.js", "--verify", filePath) && runScript("check-fences.js", filePath);
     if (args.verify) return runScript("check-structure.js", "--verify", filePath) && runScript("check-fences.js", filePath) && checkFormatting(filePath) && checkIdempotenceReadOnly(filePath);

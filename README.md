@@ -153,8 +153,9 @@ formatting:
   full formatter pass. The delimiter row is still normalized to [GFM]-canonical
   width.
 - **Unclosed-fence preflight** — all modes detect unclosed fences before
-  running table/pipe checks, skipping unreliable validation when fences are
-  open.
+  running table/pipe checks and skip validation that cannot be trusted while a
+  fence is open. Read-only and guarded modes fail without modifying the file;
+  unguarded write modes warn and continue formatting around the open fence.
 
 Table-shaped content inside fenced code blocks is always left untouched.
 
@@ -306,9 +307,10 @@ Reference spec: [GitHub Flavored Markdown Spec](https://github.github.com/gfm/).
   empty cells per [GFM]. Write modes repair them by inserting a space between
   the pipes. Read-only modes block with a clear error.
 - All CLI modes run pipe-safety preflight checks before table operations. When
-  unclosed fences are detected, the CLI warns that table and pipe checks are
-  unreliable and skips them while continuing with fence validation and
-  formatting.
+  an unclosed fence is detected, the CLI warns that table and pipe checks are
+  unreliable and skips them. Read-only modes and write mode with `--guard`
+  fail fence validation without modifying the file. Unguarded write modes
+  continue formatting around the open fence.
 - Write-mode `--guard` runs structural snapshots before and after formatting.
   If post-format structure doesn't match the pre-format snapshot, the original
   content is restored.
@@ -326,6 +328,7 @@ Reference spec: [GitHub Flavored Markdown Spec](https://github.github.com/gfm/).
 ## Prerequisites
 
 - Node.js >=24
+- `jq` (Hermes shell hook only)
 
 Run `mdfmt --doctor` to verify runtime readiness.
 
