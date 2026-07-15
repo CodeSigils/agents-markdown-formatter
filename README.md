@@ -1,6 +1,8 @@
 # zero-md-formatter
 
 [![GitHub Release](https://img.shields.io/github/v/release/CodeSigils/zero-md-formatter?display_name=tag&sort=semver)](https://github.com/CodeSigils/zero-md-formatter/releases/latest)
+[![npm version](https://img.shields.io/npm/v/zero-md-formatter)](https://www.npmjs.com/package/zero-md-formatter)
+[![npm downloads](https://img.shields.io/npm/dw/zero-md-formatter)](https://www.npmjs.com/package/zero-md-formatter)
 [![CI](https://github.com/CodeSigils/zero-md-formatter/actions/workflows/ci.yml/badge.svg)](https://github.com/CodeSigils/zero-md-formatter/actions/workflows/ci.yml)
 
 Zero-dependency [GFM] and MDX formatter with structural guardrails — trailing
@@ -168,6 +170,12 @@ The formatter ships as a standard agentskills-compatible skill via
 agentskills.io-formatted skills.
 
 ### Install as a skill
+
+With the standard skills CLI:
+
+```bash
+npx skills add CodeSigils/zero-md-formatter --skill markdown-formatter
+```
 
 <details>
 <summary><b>Hermes Agent</b></summary>

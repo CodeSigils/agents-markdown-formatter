@@ -17,6 +17,12 @@
     "fenced-code-blocks",
     "ai-agents",
     "agent-tools",
+    "agent-skill",
+    "agentskills",
+    "claude-code",
+    "codex",
+    "opencode",
+    "gemini-cli",
     "hermes-skill"
   ],
   "homepage": "https://github.com/CodeSigils/zero-md-formatter#readme",

@@ -27,3 +27,19 @@ it('documents the Hermes hook jq prerequisite', () => {
       `${file} should document jq as a Hermes-hook-only prerequisite`);
   }
 });
+
+it('exposes public package and skill discovery paths', () => {
+  const readme = readFileSync('README.md', 'utf8');
+  const pkg = JSON.parse(readFileSync('package.json', 'utf8'));
+
+  assert.match(readme, /img\.shields\.io\/npm\/v\/zero-md-formatter/,
+    'README should display the npm version badge');
+  assert.match(readme, /img\.shields\.io\/npm\/dw\/zero-md-formatter/,
+    'README should display the npm downloads badge');
+  assert.match(readme, /npx skills add CodeSigils\/zero-md-formatter --skill markdown-formatter/,
+    'README should document standard skills CLI installation');
+
+  for (const keyword of ['agent-skill', 'agentskills', 'claude-code', 'codex', 'opencode', 'gemini-cli']) {
+    assert.ok(pkg.keywords.includes(keyword), `package.json should include the ${keyword} discovery keyword`);
+  }
+});
