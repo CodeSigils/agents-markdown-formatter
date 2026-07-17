@@ -20,7 +20,11 @@ pack/
 
 # Agent/tool local state
 .agents/
+.claude/
 .codex/
+.cursor/
+.gemini/
+.hermes/
 .omo/
 .open-mem/
 .opencode/
@@ -32,6 +36,12 @@ Thumbs.db
 *.swo
 .vscode/
 .idea/
+
+# Local environment and secrets
+.env
+.env.*
+!.env.example
+!.env.*.example
 
 # Formatter work dirs
 fixtures/work/
