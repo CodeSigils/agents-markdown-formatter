@@ -32,7 +32,11 @@ pack/
 
 # OS and editor files
 .DS_Store
+.AppleDouble
+.LSOverride
+._*
 Thumbs.db
+[Dd]esktop.ini
 *.swp
 *.swo
 *~
